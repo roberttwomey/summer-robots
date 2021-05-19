@@ -1,25 +1,51 @@
 #!/usr/local/bin/python3
+
+# Simple text programs for python control of xARM
+# reference for https://github.com/xArm-Developer/xArm-Python-SDK
+
 from xarm.wrapper import XArmAPI
 import time
+import sys
 
 arm = XArmAPI('192.168.4.15')
 arm.connect()
 time.sleep(3)
 
-arm.move_gohome()
-code, position = arm.get_position()
+# arm.move_gohome()
+# code, home = arm.get_position()
+start = [220, 0, 120.5, 180, 0, 0]
 
-pause = 10
+positions = [
+	[*start],
+	[start[0], start[1]-300, *start[2:]],
+	[start[0]+400, start[1]-300, *start[2:]],
+	[start[0]+400, start[1]+300, *start[2:]],
+	[start[0], start[1]+300, *start[2:]],
+	[*start]
+]
 
-arm.set_position(position[0], position[1]-300, *position[2:])
-time.sleep(5)
-arm.set_position(position[0]+400, position[1]-300, *position[2:])
-time.sleep(5)
-arm.set_position(position[0]+400, position[1]+300, *position[2:])
-time.sleep(5)
-arm.set_position(position[0], position[1]+300, *position[2:])
-time.sleep(5)
-arm.move_gohome()
+for position in positions:
+	arm.set_position(*position, speed=350)
+	print("moving to %s" % position)
+
+	while arm.get_is_moving():
+		print(".", end="")
+		sys.stdout.flush()
+		time.sleep(0.1)
+	print()
+
+print("done.")
+# pause = 10
+
+# arm.set_position(position[0], position[1]-300, *position[2:])
+# time.sleep(5)
+# arm.set_position(position[0]+400, position[1]-300, *position[2:])
+# time.sleep(5)
+# arm.set_position(position[0]+400, position[1]+300, *position[2:])
+# time.sleep(5)
+# arm.set_position(position[0], position[1]+300, *position[2:])
+# time.sleep(5)
+# arm.move_gohome()
 
 
 # >>> from xarm.wrapper import XArmAPI
