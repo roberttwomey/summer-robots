@@ -14,22 +14,33 @@ time.sleep(3)
 # arm.move_gohome()
 # code, home = arm.get_position()
 
-rest = [300, 0, 20.5, 180, 0, 0]
-start = [300, 0, -7.0, 180, 0, 0]
+rest = [206, 0, 120, 180, 0, 0]
+# start = [225, 0, 85, 180, 0, 0]
+# start = [230, 0, 100, 180, 0, 0]
+start = [230, 0, 110, 180, 0, 0]
 
+width = 609.6
+height = 457.2
+
+speed = 200 #120 # 350
+
+# Test 1: SQUARE TEST
 positions = [
  	rest,
 	start,
-	[start[0], start[1]-300, *start[2:]],
-	[start[0]+400, start[1]-300, start[2]+12, *start[3:]],
-	[start[0]+400, start[1]+300, start[2]+12, *start[3:]],
-	[start[0], start[1]+300, *start[2:]],
+	# [start[0]+400, *start[1:]],
+	# start,
+	[start[0], start[1]-width/2, *start[2:]],
+	[start[0]+height, start[1]-width/2, start[2], *start[3:]],
+	[start[0]+height, start[1]+width/2, start[2], *start[3:]],
+	[start[0], start[1]+width/2, *start[2:]],
 	start, 
 	rest
 ]
 
+
 for position in positions:
-	arm.set_position(*position, speed=120)#350)
+	arm.set_position(*position, speed=speed)#350)
 	print("moving to %s" % position)
 
 	while arm.get_is_moving():
