@@ -14,7 +14,7 @@ import argparse
 import cv2
 
 
-def readDrawingData_rk(filename, width, height):
+def readDrawingData_Inkscape(filename, width, height):
 
     f = open(filename)
 
@@ -40,14 +40,11 @@ def readDrawingData_rk(filename, width, height):
             print("too many columns in file: %s" % i)
             exit()
 
-        if len(fields) == 6:
-            # six fields including tilt
-            seconds, xpos, ypos, zpos, tiltx, tilty = fields
-        else:
-            seconds, xpos, ypos, zpos = fields
+        xpos, ypos, zpos, seconds = fields
 
-        xpos = xpos * width#1.29237
-        ypos = ypos * height
+        # xpos = xpos * width#1.29237
+        # xpos = width - xpos
+        # ypos = height - ypos 
 
         pos = np.array([xpos, ypos])
 
@@ -112,23 +109,24 @@ def filterToRobot(points, start_pos, pen_height, width, height, outwidth):
     outpoints = []
 
     for point in points:
-        # print(point)
+        
         xy = point[1:3]
         z = point[3]
         curr = mapToScreen(xy, 0, width, 0, height, outwidth*25.4)
-                    
+        
+        if(curr[0] > 0 and curr[1] > 0):
         # set radius > 0 for continuous motion
-        outpoint = [ start_pos[0]+curr[1], 
-                        start_pos[1]+curr[0],
-                        start_pos[2]-(float(z)*pen_height),
-                        *start_pos[3:], 5 ]
+            outpoint = [ start_pos[0]+curr[1], 
+                            start_pos[1]+curr[0],
+                            start_pos[2]-(float(z)*pen_height),
+                            *start_pos[3:], 5 ]
 
         # outpoint = [ start_pos[0]+curr[1], 
         #                 start_pos[1]+curr[0],
         #                 start_pos[2]-(float(point[3])*pen_height),
         #                 *start_pos[3:]]
 
-        outpoints.append(outpoint)
+            outpoints.append(outpoint)
     # print(outpoints)
     # exit()
     return outpoints
@@ -178,7 +176,7 @@ def main():
         
         print("reading {}...".format(infname), end="")
         # read in input file (drawing reording)
-        points, boundingbox = readDrawingData_rk(infname, width, height)
+        points, boundingbox = readDrawingData_Inkscape(infname, width, height)
         
         paths.append(points)
         # for path in points:
@@ -229,7 +227,7 @@ def main():
     xarm_rest_pos = [220, 0, 120.5, 180, 0, 0]
     xarm_start_pos = [220, 0-(outwidth*0.5*25.4), 120.5, 180, 0, 0]
     xarm_speed = 350
-    # xarm_mvacc = 800
+    xarm_mvacc = 800
     xarm_height = 15.0 #mm
     # xarm_speed1=1000
 
@@ -275,6 +273,7 @@ def main():
                 # print(points)
                 count += n
 
+                # arm.move_arc_lines(points, speed=50, mvacc = xarm_mvacc, wait=False)
                 arm.move_arc_lines(points, speed=50, wait=False)
 
         # for path in paths[firstfile:]:
