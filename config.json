@@ -1,8 +1,0 @@
-{
-  "joinPathData": false,
-  "minDistance": 0.5,
-  "roundToNearest": 0.25,
-  "sampleFrequency": 0.1,
-  "pretty": false,
-  "prettyIndent": 0
-}
