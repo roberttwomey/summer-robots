@@ -1,2 +1,2 @@
 # summer-robots
-experimenting with xarm7 summer 2021
+experimenting with xarm7 summer ~2021~ 2022
