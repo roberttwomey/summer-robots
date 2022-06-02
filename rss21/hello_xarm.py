@@ -9,6 +9,10 @@ import sys
 
 arm = XArmAPI('192.168.4.15')
 arm.connect()
+
+# turn off simulation
+arm.set_simulation_robot(on_off=False)
+
 time.sleep(3)
 
 # arm.move_gohome()
