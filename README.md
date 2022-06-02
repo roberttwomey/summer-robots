@@ -16,18 +16,29 @@ cd ..
 compilePG.sh
 ```
 
-git clone ofxRobotArm
+Install git-lfs before you clone ofxRobotArm:
+```
+sudo apt-get install git-lfs
+```
+
+change to the addons directory and clone ofxRobotArm:
+```
+git clone https://github.com/CreativeInquiry/ofxRobotArm
+cd ofxRobotarm
 ./install_dependencies.sh
 sudo apt-get install libboost-all-dev
+```
 
-run project generator on example-urdf folder
+run the project generator on the `ofxRobotArm/example-urdf` folder.
 
 install the following (fixes cairo.h error…)
 ```
 sudo apt-get install libyaml-cpp-dev
 sudo apt-get install libnlopt-dev
-make
 ```
+
+make the example-urdf project:
+```make```
 
 # ROS 1
 
