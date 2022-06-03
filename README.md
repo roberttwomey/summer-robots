@@ -27,7 +27,7 @@ cd ..
 compilePG.sh
 ```
 
-__2. Download ofxRobotArm and install to the _oF/addons_ directory__
+__Download ofxRobotArm and install to the _oF/addons_ directory__
 
 Install git-lfs before you clone ofxRobotArm (because the repo has some large files included):
 ```
@@ -42,7 +42,7 @@ cd ofxRobotarm
 sudo apt-get install libboost-all-dev
 ```
 
-__3. Compile and run the _example-urdf_
+__Compile _example-urdf_ __
 
 Run the project generator on the `ofxRobotArm/example-urdf` folder.
 
@@ -55,9 +55,10 @@ sudo apt-get install libnlopt-dev
 Make the example-urdf project:
 ```
 cd addons/ofxRobotArm/example-urdf
-make```
+make
+```
 
-__3. Run the program__
+__Run _example-urdf_ program__
 
 To run the program, you can use the following command from the program folder:
 ```make RunRelease```
