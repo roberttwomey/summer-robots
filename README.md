@@ -1,5 +1,5 @@
 # summer-robots
-experimenting with xarm7 summer ~2021~ 2022
+experimenting with xarm7 summer ~2021~ 2022 with
 
 # ofxRobotArm
 
