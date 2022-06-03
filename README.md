@@ -77,6 +77,10 @@ here is the UFACTORY xArm - https://github.com/xArm-Developer/xArm-Python-SDK
 ## our python code
 
 ## pybullet
+
+<img width="400" alt="image" src="https://user-images.githubusercontent.com/1598545/171915352-566fb972-045a-4b04-8016-76c592f33d28.png">
+
+
 Create a mamba environment: 
 ```mamba create -n pybullet python=3.9```
 
