@@ -8,16 +8,27 @@ Exploring [ofxRobotArm](#ofxrobotarm), [ROS](#ros) and [python](#python).
 
 ## ofxRobotArm on Linux
 
-install openframeworks. download from here: 
-https://openframeworks.cc/download/
+__1. Download and install openFrameworks__
+
+download from here: https://openframeworks.cc/download/
+
+__run the install scripts__
+located in _scripts/linux/ubuntu_
 
 ```
 cd scripts/linux/ubuntu/
 sudo ./install_dependencies.sh
 sudo ./install_codecs.sh
+```
+
+__compile the project generator__
+located in _scripts/linux_
+```
 cd ..
 compilePG.sh
 ```
+
+__2. Download ofxRobotArm and install to the oF/addons directory__
 
 Install git-lfs before you clone ofxRobotArm:
 ```
