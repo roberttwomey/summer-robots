@@ -42,7 +42,7 @@ cd ofxRobotarm
 sudo apt-get install libboost-all-dev
 ```
 
-__Compile _example-urdf_ __
+__Compile the example program__
 
 Run the project generator on the `ofxRobotArm/example-urdf` folder.
 
@@ -58,7 +58,7 @@ cd addons/ofxRobotArm/example-urdf
 make
 ```
 
-__Run _example-urdf_ program__
+__Run the example program__
 
 To run the program, you can use the following command from the program folder:
 ```make RunRelease```
@@ -76,6 +76,29 @@ here is the UFACTORY xArm - https://github.com/xArm-Developer/xArm-Python-SDK
 
 ## our python code
 
+## pybullet
+Create a mamba environment: 
+```mamba create -n pybullet python=3.9```
+
+Open this environment
+```conda activate pybullet```
+
+Install pybullet:
+```pip3 install pybullet```
+
+Clone xArm-Python-SDK:
+```
+git clone https://github.com/erwincoumans/xArm-Python-SDK
+```
+
+Run the example (which traces a cricle in 3d modeled environment): 
+```
+cd examples/wrapper/xarm7
+python3 loadxarm_sim.py
+```
+
+To run this on the real arm: 
+```python3 xarm_real_ik.py```
+
 # Reference
-- UFACTORY Forums (great place to search for help): http://forum.ufactory.cc/
-- xarm7 with pybullet: 
+- UFACTORY Forums (great place to ask for help): http://forum.ufactory.cc/
