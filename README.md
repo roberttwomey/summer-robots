@@ -1,5 +1,8 @@
 # summer-robots
-experimenting with xarm7 summer ~2021~ 2022 with
+experimenting with the xarm7 in the summer! 2021, 2022
+
+Exploring [ofxRobotArm](#ofxrobotarm), [ROS](#ros) and [python](#python).
+
 
 # ofxRobotArm
 
