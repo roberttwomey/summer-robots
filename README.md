@@ -40,7 +40,17 @@ sudo apt-get install libnlopt-dev
 make the example-urdf project:
 ```make```
 
-# ROS 1
+# ROS
 
-# xArm-python-sdK
+## ROS 1
 
+# Python
+
+## xArm-python-sdK
+here is the UFACTORY xArm - https://github.com/xArm-Developer/xArm-Python-SDK
+
+## our python code
+
+# Reference
+- UFACTORY Forums (great place to search for help): http://forum.ufactory.cc/
+- xarm7 with pybullet: 
