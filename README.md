@@ -92,6 +92,9 @@ Create a mamba environment:
 Open this environment
 ```conda activate pybullet```
 
+Install numpy: 
+```mamba install numpy```
+
 Install pybullet:
 ```pip3 install pybullet```
 
@@ -102,7 +105,7 @@ git clone https://github.com/erwincoumans/xArm-Python-SDK
 
 Run the example (which traces a cricle in 3d modeled environment): 
 ```
-cd examples/wrapper/xarm7
+cd example/wrapper/xarm7
 python3 loadxarm_sim.py
 ```
 
