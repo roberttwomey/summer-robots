@@ -85,6 +85,8 @@ here is the UFACTORY xArm - https://github.com/xArm-Developer/xArm-Python-SDK
 
 <img width="400" alt="image" src="https://user-images.githubusercontent.com/1598545/171915352-566fb972-045a-4b04-8016-76c592f33d28.png">
 
+[a thread from ufactory forums about this](https://forum.ufactory.cc/t/smoother-linear-motion-with-xarm-7-leap-motion/2285/9)
+
 
 Create a mamba environment: 
 ```mamba create -n pybullet python=3.9```
