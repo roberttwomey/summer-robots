@@ -45,6 +45,8 @@ sudo apt-get install libboost-all-dev
 
 __Compile the example program__
 
+edit the `config.make` file in `example-urdf` - remove/comment out the OF_ROOT line (or add the path to your openFrameworks root directory)
+
 Run the project generator on the `ofxRobotArm/example-urdf` folder.
 
 Install the following libraries on your ubuntu system (fixes the cairo.h error…)
