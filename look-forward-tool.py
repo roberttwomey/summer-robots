@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+    #!/usr/bin/env python3
 # Software License Agreement (BSD License)
 #
 # Copyright (c) 2022, UFACTORY, Inc.
@@ -99,19 +99,39 @@ if not params['quit']:
         # code = arm.set_servo_angle(angle=[0.1, -34.9, -0.1, 1.6, 0, -63.5, 0.1], speed=params['angle_speed'], mvacc=params['angle_acc'], wait=True, radius=-1.0)
         code = arm.set_servo_angle(angle=[0.0, -45.0, 0.0, 0.0, 0.0, -45.0, 0.0], speed=params['angle_speed'], mvacc=params['angle_acc'], wait=True, radius=-1.0)
 
-
         if code != 0:
             params['quit'] = True
             pprint('set_servo_angle, code={}'.format(code))
 
 # relative moves
+arm.set_position(pitch=-80.0, relative=False, wait=True)
+
 
 # arm.set_position(pitch=-10.0, relative=True, wait=True)
-# arm.set_position(pitch=-20.0, relative=True, wait=True)
+# print(arm.get_position(), arm.get_position(is_radian=True))
 # arm.set_position(pitch=-10.0, relative=True, wait=True)
+
+arm.set_tool_position(pitch=10.0, wait=True)
+arm.set_tool_position(pitch=-20.0, wait=True)
+arm.set_tool_position(pitch=10.0, wait=True)
+
+# arm.set_servo_angle([5, 0, 0, 0, 0, 0, 0], relative=True, wait=True)
+# arm.set_servo_angle([-5, 0, 0, 0, 0, 0, 0], relative=True, wait=True)
+arm.set_servo_angle(servo_id=1, angle=3, relative=True, is_radian=False, wait=True)
+arm.set_servo_angle(servo_id=1, angle=-6, relative=True, is_radian=False, wait=True)
+arm.set_servo_angle(servo_id=1, angle=3, relative=True, is_radian=False, wait=True)
+
+# arm.set_position(pitch=-20.0, relative=True, wait=True)
+# print(arm.get_position(), arm.get_position(is_radian=True))
+# arm.set_position(pitch=-10.0, relative=True, wait=True)
+# print(arm.get_position(), arm.get_position(is_radian=True))
 # arm.set_position(roll=-10.0, relative=True, wait=True)
+# print(arm.get_position(), arm.get_position(is_radian=True))
 # arm.set_position(roll=20.0, relative=True, wait=True)
+# print(arm.get_position(), arm.get_position(is_radian=True))
 # arm.set_position(roll=-10, relative=True, wait=True)
+# print(arm.get_position(), arm.get_position(is_radian=True))
+
 
 # back to forward
 # arm.set_servo_angle(angle=[0.0, -45.0, 0.0, 0.0, 0.0, -45.0, 0.0], speed=params['angle_speed'], mvacc=params['angle_acc'], wait=True, radius=-1.0)

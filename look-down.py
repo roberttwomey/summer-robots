@@ -52,6 +52,7 @@ time.sleep(1)
 variables = {}
 params = {'speed': 100, 'acc': 2000, 'angle_speed': 20, 'angle_acc': 500, 'events': {}, 'variables': variables, 'callback_in_thread': True, 'quit': False}
 
+lookdown_ang = [0.4, 5.6, -1.0, 110.1, 2.3, 101.6, -0.1]
 
 # Register error/warn changed callback
 def error_warn_change_callback(data):
@@ -96,15 +97,12 @@ if not params['quit']:
     # if params['quit']:
     
     if arm.error_code == 0 and not params['quit']:
-        # code = arm.set_servo_angle(angle=[0.1, -34.9, -0.1, 1.6, 0, -63.5, 0.1], speed=params['angle_speed'], mvacc=params['angle_acc'], wait=True, radius=-1.0)
-        code = arm.set_servo_angle(angle=[0.0, -45.0, 0.0, 0.0, 0.0, -45.0, 0.0], speed=params['angle_speed'], mvacc=params['angle_acc'], wait=True, radius=-1.0)
-
+        code = arm.set_servo_angle(angle=lookdown_ang, speed=params['angle_speed'], mvacc=params['angle_acc'], wait=True, radius=-1.0)
+        # code = arm.set_servo_angle(angle=[0.6, -22.5, -0.9, 81.2, 1.8, 100.8, 0.1], speed=params['angle_speed'], mvacc=params['angle_acc'], wait=True, radius=-1.0)
 
         if code != 0:
             params['quit'] = True
             pprint('set_servo_angle, code={}'.format(code))
-
-# relative moves
 
 # arm.set_position(pitch=-10.0, relative=True, wait=True)
 # arm.set_position(pitch=-20.0, relative=True, wait=True)

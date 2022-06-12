@@ -20,16 +20,8 @@ import traceback
 import threading
 import cv2
 
-# ==== Setup OpenCV / Vision ====
-
-# To capture video from webcam. 
-cap = cv2.VideoCapture(0)
-# To use a video file as input 
-# cap = cv2.VideoCapture('filename.mp4')
-
-# Load the cascade
-face_cascade = cv2.CascadeClassifier('data/haarcascade_frontalface_default.xml')
-
+# ==== Configuration ====
+showDebug = True
 
 # ==== Setup Robot ====
 
@@ -108,7 +100,7 @@ arm.register_connect_changed_callback(connect_changed_callback)
 if not params['quit']:
     params['angle_acc'] = 1145
 if not params['quit']:
-    params['angle_speed'] = 80
+    params['angle_speed'] = 50
     # if params['quit']:
     
     if arm.error_code == 0 and not params['quit']:
@@ -124,19 +116,67 @@ if not params['quit']:
 # arm.set_position(roll=20.0, relative=True, wait=True)
 # arm.set_position(roll=-10, relative=True, wait=True)
 
+# print(arm.last_used_tcp_speed, arm.last_used_tcp_acc)
+
+
+# ==== Setup OpenCV / Vision ====
+
+# To capture video from webcam. 
+cap = cv2.VideoCapture(0)
+# To use a video file as input 
+# cap = cv2.VideoCapture('filename.mp4')
+
+capWidth = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
+capHeight = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
+
+# Load the cascade
+face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
+
+# load text
+font                   = cv2.FONT_HERSHEY_SIMPLEX
+bottomLeftCornerOfText = (10,500)
+fontScale              = 1
+fontColor              = (255,255,255)
+thickness              = 1
+lineType               = 2
+
 
 while True:
     # Read the frame
     _, img = cap.read()
-    # Convert to grayscale
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    # Detect the faces
-    faces = face_cascade.detectMultiScale(gray, 1.1, 4, minSize=(150,150))
-    # Draw the rectangle around each face
-    for (x, y, w, h) in faces:
-        cv2.rectangle(img, (x, y), (x+w, y+h), (255, 0, 0), 2)
-    # Display
-    cv2.imshow('img', img)
+    
+    if img is not None:
+        # Convert to grayscale
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        # Detect the faces
+        faces = face_cascade.detectMultiScale(gray, 1.1, 4, minSize=(150,150), maxSize=(600, 600))
+        # Draw the rectangle around each face
+        for (x, y, w, h) in faces:
+            if showDebug:
+                cv2.rectangle(img, (x, y), (x+w, y+h), (255, 0, 0), 2)
+                cv2.putText(img,"{} x {}".format(w,h), (x,y), 
+                    font, 
+                    fontScale,
+                    fontColor,
+                    thickness,
+                    lineType)
+
+        # Display
+        cv2.imshow('img', img)
+
+        
+        if len(faces) > 0:
+            # calculate distance of first face from center of image
+            (x, y, w, h) = faces[0]
+            offsetX = (0.5*capWidth-(x+w*0.5))/capWidth
+            offsetY = (0.5*capHeight-(y+h*0.5))/capHeight
+            dPitch = 3.0*offsetY
+            dRoll = 3.0*offsetX
+
+            # add front back moves
+            arm.set_position(pitch=dPitch, roll=dRoll, relative=True, speed=500, mvacc=4000, wait=False)
+
+
     # Stop if escape key is pressed
     k = cv2.waitKey(30) & 0xff
     if k==27:
@@ -144,8 +184,7 @@ while True:
 # Release the VideoCapture object
 cap.release()
 
-
-# restore robot arm and equit
+# restore robot arm and disconnect
 
 # back to forward
 arm.set_servo_angle(angle=[0.1, -34.9, -0.1, 1.6, 0, -63.5, 0.1], speed=params['angle_speed'], mvacc=params['angle_acc'], wait=True, radius=-1.0)
