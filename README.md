@@ -45,6 +45,8 @@ sudo apt-get install libboost-all-dev
 
 __Compile the example program__
 
+edit the `config.make` file in `example-urdf` - remove/comment out the OF_ROOT line (or add the path to your openFrameworks root directory)
+
 Run the project generator on the `ofxRobotArm/example-urdf` folder.
 
 Install the following libraries on your ubuntu system (fixes the cairo.h error…)
@@ -85,12 +87,17 @@ here is the UFACTORY xArm - https://github.com/xArm-Developer/xArm-Python-SDK
 
 <img width="400" alt="image" src="https://user-images.githubusercontent.com/1598545/171915352-566fb972-045a-4b04-8016-76c592f33d28.png">
 
+[a thread from ufactory forums about this](https://forum.ufactory.cc/t/smoother-linear-motion-with-xarm-7-leap-motion/2285/9)
+
 
 Create a mamba environment: 
 ```mamba create -n pybullet python=3.9```
 
 Open this environment
 ```conda activate pybullet```
+
+Install numpy: 
+```mamba install numpy```
 
 Install pybullet:
 ```pip3 install pybullet```
@@ -102,7 +109,7 @@ git clone https://github.com/erwincoumans/xArm-Python-SDK
 
 Run the example (which traces a cricle in 3d modeled environment): 
 ```
-cd examples/wrapper/xarm7
+cd example/wrapper/xarm7
 python3 loadxarm_sim.py
 ```
 
