@@ -48,11 +48,6 @@ def calcArmPos(matrix, p):
 	position = [p_after[0], p_after[1], 110.1, 180.0, 0.0, 0.0]
 	return position
 
-mytest = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
-for p in mytest:
-	p_after = calcTransformed(H, p)
-	print(p_after)
-
 # print(transformedPoints)
 # exit()
 

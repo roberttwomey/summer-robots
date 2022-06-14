@@ -23,17 +23,18 @@ def readJSON(filename):
         data = myfile.read()
 
     pydata = simplejson.loads(data)
-    print(pydata)
+    print(len(pydata))
     polys = []
 
     for path in pydata:
         # print(pydata[path])
-
         thispath = []
-        for i in range(0, len(pydata[path]), 2):
-            x = pydata[path][i]
-            y = pydata[path][i+1]
-            
+
+        for point in path:
+            print(point)
+            x = point['x']
+            y = point['y']
+            print(x,y)
             thispath.append((x, y))
         
         if(len(thispath) > 5):
@@ -54,10 +55,10 @@ def readJSON(filename):
 
 # coordinate generation / sorting
 
-def generateCoords(polys, minlen, height):
+def generateCoords(polys, minlen):
     """
-    Generates list of x,y,z coordinates from points in GeoJSON file.
-    list of polys and coordinats.
+    Generates list of x,y,z coordinates from points in json file.
+    list of polys and coordinates.
     """
     
     wcount = 0
@@ -80,15 +81,13 @@ def generateCoords(polys, minlen, height):
             # check distance threshold
             if np.linalg.norm(np.array(coord)-np.array(last)) > minlen:               
                 if first:
-                    # write move to first point, pen up
-                    # cbuff.append([x, height-y, 0.])
+                    # move to first point, pen up
                     cbuff.append([x, y, 0.])
                     last = coord
                     first = False
                     wcount = wcount + 1
 
-                # write to file
-                # cbuff.append([x, height-y, 1.])                                
+                # write to file, pen down
                 cbuff.append([x, y, 1.])                                
                 last = coord
                 wcount = wcount + 1
@@ -98,7 +97,7 @@ def generateCoords(polys, minlen, height):
                 scount = scount + 1
 
         # last
-        # stay at last point, pen up
+        # stay at last point, add pen up
         cbuff.append([last[0], last[1], 0.])
         wcount = wcount + 1                 
 
@@ -155,9 +154,10 @@ def sortPolys(polys):
                     flipped = True
                     minlen = endlen
 
-                #print "testing {0}, len1: {1}\tlen2: {2}\tmin: {3}".format(i, beginlen, endlen, minlen)
+                print("  testing {0}, len1: {1:.2f}\tlen2: {2:.2f}\tmin: {3:.2f}".format(i, beginlen, endlen, minlen))
 
         # we have our victor
+        print("best {} flipped {} {:.2f}".format(closest, flipped, minlen))
         if flipped:
             sortedpolys.append(polys[closest][::-1])
         else:
@@ -166,7 +166,7 @@ def sortPolys(polys):
         used[closest] = True
         last = sortedpolys[-1][-1]
         count = count + 1
-
+        sys.stdout.flush()
         
         if count == len(polys):
             done = True
@@ -265,11 +265,11 @@ def main():
     polys = readJSON(infile)
 
     print("=== NEAREST NEIGHBOR SORT ===")
-    # sortedpolys = sortPolys(polys)
+    sortedpolys = sortPolys(polys)
                        
     print("=== FILTER COORDS ===")
-    coords = generateCoords(polys, minlen, height) #polys) #
-    # coords = generateCoords(sortedpolys, minlen, height) #polys) #
+    # coords = generateCoords(polys, minlen)
+    coords = generateCoords(sortedpolys, minlen)
     # cleaned = removeDuplicates(coords)
 
 
