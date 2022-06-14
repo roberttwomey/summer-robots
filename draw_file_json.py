@@ -232,7 +232,11 @@ def renderAsImage(paths, filename, outwidth, outheight):
 # recpoints, bounds = readDrawingRecording("data/3891_0911092146.txt")
 # unsorted_paths = readJSON("../data/CLIPassoGAN_sample02_segs.json")
 # unsorted_paths = readGeoJSON("../data/GAN_sample02.json")
-# unsorted_paths = readGeoJSON("../data/sample01.json")
+
+# unsorted_paths = readJSON("../data/sample01_ink_flatten.json", 908, 681)
+# paths = sortPaths(unsorted_paths)
+# renderAsImage(paths, "../data/sample01_ink_flatten.png", 1024, 1024)
+
 
 # print("Number of arguments: ", len(sys.argv))
 # print("The arguments are: " , str(sys.argv))
@@ -241,10 +245,8 @@ def renderAsImage(paths, filename, outwidth, outheight):
 if len(sys.argv) > 1:
     infile = sys.argv[1]
     pngfile = sys.argv[1].split(".json")[0]+"_paths.png"
-
-# unsorted_paths = readJSON("../data/sample01_ink_flatten.json", 908, 681)
-# paths = sortPaths(unsorted_paths)
-# renderAsImage(paths, "../data/sample01_ink_flatten.png", 1024, 1024)
+else: 
+    infile = "../data/sample01"
 unsorted_paths = readJSON(infile, 908, 681)
 paths = sortPaths(unsorted_paths)
 renderAsImage(paths, pngfile, 1024, 1024)

@@ -19,17 +19,19 @@ import random
 import traceback
 import threading
 import cv2
-from enum import enum
+
 
 # ==== Configuration ====
-class Mode(Enum):
-    FACE = 0
-    PAPER = 1
-    DRAW = 2
+FACE = 0
+PAPER = 1
+DRAW = 2
+
+# frontAngle = [0.1, -34.9, -0.1, 1.6, 0, -63.5, 0.1]
+frontAngle = [0.2, 4.7, -0.2, 39.1, 0, -60.0]
+
+closeSizeCutoff = 275.0
 
 showDebug = True
-
-
 
 # ==== Setup Robot ====
 
@@ -39,7 +41,6 @@ showDebug = True
 # cd xArm-Python-SDK
 # python setup.py install
 """
-
 
 try:
     from xarm.tools import utils
@@ -112,7 +113,7 @@ if not params['quit']:
     # if params['quit']:
     
     if arm.error_code == 0 and not params['quit']:
-        code = arm.set_servo_angle(angle=[0.1, -34.9, -0.1, 1.6, 0, -63.5, 0.1], speed=params['angle_speed'], mvacc=params['angle_acc'], wait=True, radius=-1.0)
+        code = arm.set_servo_angle(angle=frontAngle, speed=params['angle_speed'], mvacc=params['angle_acc'], wait=True, radius=-1.0)
         if code != 0:
             params['quit'] = True
             pprint('set_servo_angle, code={}'.format(code))
@@ -159,7 +160,14 @@ while True:
         # Detect the faces
         faces = face_cascade.detectMultiScale(gray, 1.1, 4, minSize=(150,150), maxSize=(600, 600))
         # Draw the rectangle around each face
+        
+        facecount = 0
+        maxSize = 0
+        maxIndex = -1
+        maxLoc = None
+
         for (x, y, w, h) in faces:
+
             if showDebug:
                 cv2.rectangle(img, (x, y), (x+w, y+h), (255, 0, 0), 2)
                 cv2.putText(img,"{} x {}".format(w,h), (x,y), 
@@ -168,22 +176,28 @@ while True:
                     fontColor,
                     thickness,
                     lineType)
-
-        # Display
-        cv2.imshow('img', img)
-
+            
+            # check how close the face is            
+            if w > maxSize: 
+                maxSize = w
+                maxIndex = facecount
+                maxLoc = (x, y, w, h)
+            facecount += 1
         
-        if len(faces) > 0:
+        if (facecount > 0) and (maxSize > closeSizeCutoff):
+            # print(x, maxSize, closeSizeCutoff)
             # calculate distance of first face from center of image
-            (x, y, w, h) = faces[0]
+            (x, y, w, h) = maxLoc
             offsetX = (0.5*capWidth-(x+w*0.5))/capWidth
             offsetY = (0.5*capHeight-(y+h*0.5))/capHeight
             dTilt = 3.0*offsetY
             dPan = 3.0*offsetX
-            # print(dTilt, dPan, ".... ", end="")
-            print(dTilt, dPan)
+
             # add front back moves
-            
+            #print(dTilt, dPan)
+            #print('* position:', arm.position)
+            cv2.rectangle(img, (x, y), (x+w, y+h), (255, 255, 0), 10)
+
             arm.set_position(pitch=dTilt, roll=dPan, relative=True, speed=500, mvacc=4000, wait=False)
             # arm.set_tool_position(pitch=dTilt, wait=False)
             # move j1
@@ -191,17 +205,21 @@ while True:
             # print(code)
 
 
+        # Display video
+        cv2.imshow('img', img)
+
     # Stop if escape key is pressed
     k = cv2.waitKey(30) & 0xff
     if k==27:
         break
+
 # Release the VideoCapture object
 cap.release()
 
 # restore robot arm and disconnect
 
 # back to forward
-arm.set_servo_angle(angle=[0.1, -34.9, -0.1, 1.6, 0, -63.5, 0.1], speed=params['angle_speed'], mvacc=params['angle_acc'], wait=True, radius=-1.0)
+arm.set_servo_angle(angle=frontAngle, speed=params['angle_speed'], mvacc=params['angle_acc'], wait=True, radius=-1.0)
 
 # release all event
 if hasattr(arm, 'release_count_changed_callback'):

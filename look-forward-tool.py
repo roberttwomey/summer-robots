@@ -111,15 +111,14 @@ arm.set_position(pitch=-80.0, relative=False, wait=True)
 # print(arm.get_position(), arm.get_position(is_radian=True))
 # arm.set_position(pitch=-10.0, relative=True, wait=True)
 
-arm.set_tool_position(pitch=10.0, wait=True)
-arm.set_tool_position(pitch=-20.0, wait=True)
-arm.set_tool_position(pitch=10.0, wait=True)
+# testing face tracking
+# arm.set_tool_position(pitch=10.0, wait=True)
+# arm.set_tool_position(pitch=-20.0, wait=True)
+# arm.set_tool_position(pitch=10.0, wait=True)
 
-# arm.set_servo_angle([5, 0, 0, 0, 0, 0, 0], relative=True, wait=True)
-# arm.set_servo_angle([-5, 0, 0, 0, 0, 0, 0], relative=True, wait=True)
-arm.set_servo_angle(servo_id=1, angle=3, relative=True, is_radian=False, wait=True)
-arm.set_servo_angle(servo_id=1, angle=-6, relative=True, is_radian=False, wait=True)
-arm.set_servo_angle(servo_id=1, angle=3, relative=True, is_radian=False, wait=True)
+# arm.set_servo_angle(servo_id=1, angle=3, relative=True, is_radian=False, wait=True)
+# arm.set_servo_angle(servo_id=1, angle=-6, relative=True, is_radian=False, wait=True)
+# arm.set_servo_angle(servo_id=1, angle=3, relative=True, is_radian=False, wait=True)
 
 # arm.set_position(pitch=-20.0, relative=True, wait=True)
 # print(arm.get_position(), arm.get_position(is_radian=True))
