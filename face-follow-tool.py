@@ -27,7 +27,8 @@ PAPER = 1
 DRAW = 2
 
 # frontAngle = [0.1, -34.9, -0.1, 1.6, 0, -63.5, 0.1]
-frontAngle = [0.2, 4.7, -0.2, 39.1, 0, -60.0]
+# frontAngle = [0.2, 4.7, -0.2, 39.1, 0, -60.0]
+frontAngle = [0, 2.5, 0, 37.3, 0, -57.3, 0]
 
 closeSizeCutoff = 275.0
 
@@ -149,6 +150,8 @@ fontColor              = (255,255,255)
 thickness              = 1
 lineType               = 2
 
+tiltAng = 0
+panAng = 5
 
 while True:
     # Read the frame
@@ -190,20 +193,25 @@ while True:
             (x, y, w, h) = maxLoc
             offsetX = (0.5*capWidth-(x+w*0.5))/capWidth
             offsetY = (0.5*capHeight-(y+h*0.5))/capHeight
-            dTilt = 3.0*offsetY
+            
+            dTilt = -3.0*offsetY
             dPan = 3.0*offsetX
+            
+            # tiltAng += offsetY * 0.05
+            # panAng += offsetX * 0.042 
 
             # add front back moves
             #print(dTilt, dPan)
             #print('* position:', arm.position)
             cv2.rectangle(img, (x, y), (x+w, y+h), (255, 255, 0), 10)
 
-            arm.set_position(pitch=dTilt, roll=dPan, relative=True, speed=500, mvacc=4000, wait=False)
+            # arm.set_position(pitch=dTilt, roll=dPan, relative=True, speed=500, mvacc=2000, wait=False)
+            ret = arm.set_position_aa(axis_angle_pose=[0, 0, 0, 0, dTilt, dPan], speed=500, relative=True, wait=False)
+
             # arm.set_tool_position(pitch=dTilt, wait=False)
             # move j1
             # code = arm.set_servo_angle(servo_id=1, angle=dPan, relative=True, is_radian=False, wait=True)
             # print(code)
-
 
         # Display video
         cv2.imshow('img', img)

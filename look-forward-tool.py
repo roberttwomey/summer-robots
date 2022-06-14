@@ -39,6 +39,8 @@ def pprint(*args, **kwargs):
     except:
         print(*args, **kwargs)
 
+frontAngle = [0, 2.5, 0, 37.3, 0, -57.3, 0]
+
 pprint('xArm-Python-SDK Version:{}'.format(version.__version__))
 
 arm = XArmAPI('192.168.4.15')
@@ -97,14 +99,15 @@ if not params['quit']:
     
     if arm.error_code == 0 and not params['quit']:
         # code = arm.set_servo_angle(angle=[0.1, -34.9, -0.1, 1.6, 0, -63.5, 0.1], speed=params['angle_speed'], mvacc=params['angle_acc'], wait=True, radius=-1.0)
-        code = arm.set_servo_angle(angle=[0.0, -45.0, 0.0, 0.0, 0.0, -45.0, 0.0], speed=params['angle_speed'], mvacc=params['angle_acc'], wait=True, radius=-1.0)
+        code = arm.set_servo_angle(angle=frontAngle, speed=params['angle_speed'], mvacc=params['angle_acc'], wait=True, radius=-1.0)
 
         if code != 0:
             params['quit'] = True
             pprint('set_servo_angle, code={}'.format(code))
 
 # relative moves
-arm.set_position(pitch=-80.0, relative=False, wait=True)
+
+# arm.set_position(pitch=-88.0, relative=False, wait=True)
 
 
 # arm.set_position(pitch=-10.0, relative=True, wait=True)
