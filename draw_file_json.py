@@ -282,6 +282,15 @@ arm.set_pause_time(0.3)
 arm.set_simulation_robot(on_off=simulate)
 
 # Register error/warn changed callback
+
+def pprint(*args, **kwargs):
+    try:
+        stack_tuple = traceback.extract_stack(limit=2)[0]
+        print('[{}][{}] {}'.format(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())), stack_tuple[1], ' '.join(map(str, args))))
+    except:
+        print(*args, **kwargs)
+
+        
 def error_warn_change_callback(data):
     if data and data['error_code'] != 0:
         params['quit'] = True
@@ -331,14 +340,15 @@ try:
             sys.stdout.flush()
 
             code = arm.move_arc_lines(streampoints, speed=params['speed'], mvacc=params['acc'], times=1, wait=False)
-            if code != 0:
-                # release error
-                # arm.release_error_warn_changed_callback(error_warn_change_callback)
-                print(code)
-                arm.clean_warn()
-                arm.clean_error()
-                arm.move_gohome()
-                # lookForward()
+            # if code != 0:
+            #     # release error
+            #     # arm.release_error_warn_changed_callback(error_warn_change_callback)
+            #     print("Releasing error and going home")
+            #     arm.clean_warn()
+            #     arm.clean_error()
+            #     arm.motion_enable(True)
+            #     arm.move_gohome(wait=True)
+            #     lookForward()
 
         # lift pen in air before starting next path
         end_point = list(path[-1])
