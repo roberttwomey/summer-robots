@@ -193,6 +193,7 @@ while True:
                 # look down
                 if not bStarted:
                     startTime = time.time()
+                    lookForward()
                     lookDown()
                     bStarted = True
 

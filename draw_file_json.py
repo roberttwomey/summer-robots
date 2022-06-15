@@ -16,7 +16,10 @@ liftHeight = 10.0#15.0
 debug = False
 
 # arm parameters
-params = {'speed': 600, 'acc': 2000, 'angle_speed': 500, 'angle_acc': 5000}
+variables = {}
+params = {'speed': 400, 'acc': 2000, 'angle_speed': 500, 'angle_acc': 5000, 'events': {}, 'variables': variables, 'callback_in_thread': True, 'quit': False}
+
+frontAngle = [0, 2.5, 0, 37.3, 0, -57.3, 0]
 
 # define key positions and mapping to rectangle on paper
 
@@ -278,6 +281,20 @@ arm.connect()
 arm.set_pause_time(0.3)
 arm.set_simulation_robot(on_off=simulate)
 
+# Register error/warn changed callback
+def error_warn_change_callback(data):
+    if data and data['error_code'] != 0:
+        params['quit'] = True
+        pprint('err={}, quit'.format(data['error_code']))
+        arm.release_error_warn_changed_callback(error_warn_change_callback)
+arm.register_error_warn_changed_callback(error_warn_change_callback)
+
+def lookForward():
+    if arm.error_code == 0 and not params['quit']:
+        code = arm.set_servo_angle(angle=frontAngle, speed=params['angle_speed'], mvacc=params['angle_acc'], wait=True, radius=-1.0)
+        if code != 0:
+            params['quit'] = True
+            pprint('set_servo_angle, code={}'.format(code))
 
 # Position Arm
 
@@ -313,7 +330,15 @@ try:
             print("drawing {} points out of {}...".format(count, len(path)))
             sys.stdout.flush()
 
-            arm.move_arc_lines(streampoints, speed=params['speed'], mvacc=params['acc'], times=1, wait=False)
+            code = arm.move_arc_lines(streampoints, speed=params['speed'], mvacc=params['acc'], times=1, wait=False)
+            if code != 0:
+                # release error
+                # arm.release_error_warn_changed_callback(error_warn_change_callback)
+                print(code)
+                arm.clean_warn()
+                arm.clean_error()
+                arm.move_gohome()
+                # lookForward()
 
         # lift pen in air before starting next path
         end_point = list(path[-1])
