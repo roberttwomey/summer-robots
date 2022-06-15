@@ -12,9 +12,11 @@ import numpy as np
 
 bTest = False
 simulate = False
-liftHeight = 15.0
+liftHeight = 10.0#15.0
 debug = False
 
+# arm parameters
+params = {'speed': 600, 'acc': 2000, 'angle_speed': 500, 'angle_acc': 5000}
 
 # define key positions and mapping to rectangle on paper
 
@@ -43,7 +45,8 @@ def calcTransformed(matrix, p):
 
 def calcArmPos(matrix, p):
     p_after = calcTransformed(matrix, p)
-    position = [p_after[0], p_after[1], zheight, 180.0, 0.0, 0.0]
+    # position = [p_after[0], p_after[1], zheight, 180.0, 0.0, 0.0] # no radius
+    position = [p_after[0], p_after[1], zheight, 180.0, 0.0, 0.0, 1.0]
     return position
 
 # polygon loading / sorting
@@ -128,13 +131,13 @@ def readGeoJSON(filename):
                         this_path.append((x, y))
                         count+=1
 
-            if count > 3:
+            if count > 2:
                 polys.append(this_path)
 
     return polys
 
 
-def sortPaths(paths):
+def sortPaths(paths, longest=False):
     """
     Starting at 0,0, sorts all polys in array by nearest neighor,
     flipping the beginning and ends if necessary.
@@ -196,7 +199,8 @@ def sortPaths(paths):
 
     print("done. sorted {0} paths".format(count))
 
-    sortedpaths.sort(key=len, reverse=True)
+    if longest:
+        sortedpaths.sort(key=len, reverse=True)
     
     return sortedpaths
 
@@ -238,16 +242,12 @@ def renderAsImage(paths, filename, outwidth, outheight):
 # renderAsImage(paths, "../data/sample01_ink_flatten.png", 1024, 1024)
 
 
-# print("Number of arguments: ", len(sys.argv))
-# print("The arguments are: " , str(sys.argv))
-# exit()
-
 if len(sys.argv) > 1:
     infile = sys.argv[1]
     pngfile = sys.argv[1].split(".json")[0]+"_paths.png"
 else: 
     infile = "../data/sample01"
-unsorted_paths = readJSON(infile, 908, 681)
+unsorted_paths = readJSON(infile, 908, 600)#681)
 paths = sortPaths(unsorted_paths)
 renderAsImage(paths, pngfile, 1024, 1024)
 
@@ -275,7 +275,7 @@ for path in paths:
 
 arm = XArmAPI('192.168.4.15')
 arm.connect()
-# arm.set_pause_time(0.2)
+arm.set_pause_time(0.3)
 arm.set_simulation_robot(on_off=simulate)
 
 
@@ -285,43 +285,45 @@ arm.set_simulation_robot(on_off=simulate)
 lookdown = [0.4, 5.6, -1.0, 110.1, 2.3, 101.6, -0.1]
 lookforward = [0.0, -45.0, 0.0, 0.0, 0.0, -45.0, 0.0]
 
-thisspeed = 400 #200 #120 # 350
 
 # go to look
-code = arm.set_servo_angle(angle=lookforward, speed=20, mvacc=500, wait=True, radius=-1.0)
+code = arm.set_servo_angle(angle=lookforward, speed=params['speed'], mvacc=params['acc'], wait=True, radius=-1.0)
 
-arm.set_position(*rest, speed=thisspeed, wait=True)
-arm.set_position(*topleftup, speed=thisspeed, wait=True)
+arm.set_position(*rest, speed=params['speed'], wait=True)
+arm.set_position(*topleftup, speed=params['speed'], wait=True)
 
 
 # ==== DO ACTUAL DRAWING ====
+try:
+    for path in new_paths:
 
-for path in new_paths:
+        n = 5#10#25#100
+        count = 0
+        
+        # move to start with pen in air
+        start_point = list(path[0])
+        start_point[2] += liftHeight
+        print("path started: {}".format(start_point))
+        arm.set_position(*start_point, speed=params['speed'], wait=True)
 
-    n = 5#10#25#100
-    count = 0
-    
-    # move to start with pen in air
-    start_point = list(path[0])
-    start_point[2] += liftHeight
-    print("path started: {}".format(start_point))
-    arm.set_position(*start_point, speed=thisspeed, wait=True)
+        for i in range(0, len(path), n):
+            streampoints = path[i:i+n]
 
-    for i in range(0, len(path), n):
-        streampoints = path[i:i+n]
+            count += n
+            print("drawing {} points out of {}...".format(count, len(path)))
+            sys.stdout.flush()
 
-        count += n
-        print("drawing {} points out of {}...".format(count, len(path)))
-        sys.stdout.flush()
+            arm.move_arc_lines(streampoints, speed=params['speed'], mvacc=params['acc'], times=1, wait=False)
 
-        arm.move_arc_lines(streampoints, speed=100, times=1, wait=False)
+        # lift pen in air before starting next path
+        end_point = list(path[-1])
+        end_point[2] += liftHeight
+        print("path ended: {}".format(end_point))
+        arm.set_position(*end_point, speed=params['speed'], wait=True)
 
-    # lift pen in air before starting next path
-    end_point = list(path[-1])
-    end_point[2] += liftHeight
-    print("path ended: {}".format(end_point))
-    arm.set_position(*end_point, speed=thisspeed, wait=True)
+    print("done.")
+except KeyboardInterrupt:
+    print("quitting.")
 
-print("done.")
-
-code = arm.set_servo_angle(angle=lookforward, speed=20, mvacc=500, wait=True, radius=-1.0)
+sys.stdout.flush()
+code = arm.set_servo_angle(angle=lookforward, speed=params['speed'], mvacc=params['acc'], wait=True, radius=-1.0)
