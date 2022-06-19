@@ -66,9 +66,7 @@ __Run the example program__
 To run the program, you can use the following command from the program folder:
 ```make RunRelease```
 
-When you first run eample it will crash with a segmentation fault. This is because it is trying to load a urdf model file that is not present in the data folder: _example-urdf/bin/data/relaxed_ik_core/config/urdfs/irb4600_60_205.urdf_ folder. Y
-
-ou will need to either switch to a different robot arm (for instance UR10) in _ofApp.cpp_ in the example (see [this line here](https://github.com/CreativeInquiry/ofxRobotArm/blob/ef7bff0111d5271cac52c5c30a93675a658ed035/example-urdf/src/ofApp.cpp#L10)), or copy the correct URDF file to the data path above. 
+When you first run eample it will crash with a segmentation fault. This is because it is trying to load a urdf model file that is not present in the data folder: _example-urdf/bin/data/relaxed_ik_core/config/urdfs/irb4600_60_205.urdf_ folder. You will need to either switch to a different robot arm (for instance UR10) in _ofApp.cpp_ in the example (see [this line here](https://github.com/CreativeInquiry/ofxRobotArm/blob/ef7bff0111d5271cac52c5c30a93675a658ed035/example-urdf/src/ofApp.cpp#L10)), or copy the correct URDF file to the data path above. 
 
 The file, irb4600_60_205.urdf is [here](https://github.com/CreativeInquiry/ofxRobotArm/blob/beta.1/data/relaxed_ik_core/config/urdfs/irb4600_60_205.urdf).
 
