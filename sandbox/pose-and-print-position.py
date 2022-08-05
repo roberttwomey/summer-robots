@@ -46,6 +46,7 @@ def main():
         
         while True:
             print('* position:', arm.position)
+            # print('\t angles:', arm.angles)
             time.sleep(0.1)
             sys.stdout.flush()
     except (KeyboardInterrupt):

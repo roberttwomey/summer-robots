@@ -154,7 +154,8 @@ if not params['quit']:
 # ==== Setup OpenCV / Vision ====
 
 # To capture video from webcam. 
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(2) # most recent external camera
+# cap = cv2.VideoCapture(1) # facetime camera
 # To use a video file as input 
 # cap = cv2.VideoCapture('filename.mp4')
 
@@ -307,8 +308,13 @@ while True:
                         startTime = time.time()
 
                         # move back to center
-                        lookForward()
-                        
+                        # lookForward()
+
+                        # relax to front position
+                        currAngle = arm.angles
+                        weight=0.05
+                        destAngle = [(1.0-weight)*currAngle[i]+weight*frontAngle[i] for i in range(len(frontAngle))]
+                        arm.set_servo_angle(angle=destAngle, speed=params['angle_speed'], mvacc=params['angle_acc'], wait=False, radius=-1.0)            
 
                 if time.time() - startTime > timeLookFace: 
                     robotBehavior = PAPER

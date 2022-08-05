@@ -72,7 +72,7 @@ thisspeed = 400 #200 #120 # 350
 # ]
 
 # go to look
-code = arm.set_servo_angle(angle=lookforward, speed=20, mvacc=500, wait=True, radius=-1.0)
+code = arm.set_servo_angle(angle=lookforward, speed=50, mvacc=500, wait=True, radius=-1.0)
 
 arm.set_position(*rest, speed=thisspeed, wait=True)
 arm.set_position(*topleftup, speed=thisspeed, wait=True)
@@ -89,7 +89,7 @@ for point in points:
 		input("Press Enter to continue...")
 
 print("done.")
-code = arm.set_servo_angle(angle=lookforward, speed=20, mvacc=500, wait=True, radius=-1.0)
+code = arm.set_servo_angle(angle=lookforward, speed=50, mvacc=500, wait=True, radius=-1.0)
 
 
 

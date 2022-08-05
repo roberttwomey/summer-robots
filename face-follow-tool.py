@@ -29,6 +29,7 @@ DRAW = 2
 # frontAngle = [0.1, -34.9, -0.1, 1.6, 0, -63.5, 0.1]
 # frontAngle = [0.2, 4.7, -0.2, 39.1, 0, -60.0]
 frontAngle = [0, 2.5, 0, 37.3, 0, -57.3, 0]
+downAngle = [0, 1.8, 0, 100, 0.1, 96.7, 0] # v2
 
 closeSizeCutoff = 275.0
 
@@ -68,7 +69,7 @@ arm.set_state(0)
 time.sleep(1)
 
 variables = {}
-params = {'speed': 100, 'acc': 2000, 'angle_speed': 20, 'angle_acc': 500, 'events': {}, 'variables': variables, 'callback_in_thread': True, 'quit': False}
+params = {'speed': 100, 'acc': 2000, 'angle_speed': 75, 'angle_acc': 500, 'events': {}, 'variables': variables, 'callback_in_thread': True, 'quit': False}
 
 
 # Register error/warn changed callback
@@ -132,7 +133,7 @@ if not params['quit']:
 # ==== Setup OpenCV / Vision ====
 
 # To capture video from webcam. 
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(2)
 # To use a video file as input 
 # cap = cv2.VideoCapture('filename.mp4')
 
@@ -152,6 +153,9 @@ lineType               = 2
 
 tiltAng = 0
 panAng = 5
+timeLastSeen = time.time()
+updateInterval = 0.1
+tLastUpdated = time.time()
 
 while True:
     # Read the frame
@@ -194,8 +198,9 @@ while True:
             offsetX = (0.5*capWidth-(x+w*0.5))/capWidth
             offsetY = (0.5*capHeight-(y+h*0.5))/capHeight
             
-            dTilt = -3.0*offsetY
-            dPan = 3.0*offsetX
+            scale = 7.0
+            dTilt = -1.0*scale*offsetY
+            dPan = scale*offsetX
             
             # tiltAng += offsetY * 0.05
             # panAng += offsetX * 0.042 
@@ -205,13 +210,73 @@ while True:
             #print('* position:', arm.position)
             cv2.rectangle(img, (x, y), (x+w, y+h), (255, 255, 0), 10)
 
-            # arm.set_position(pitch=dTilt, roll=dPan, relative=True, speed=500, mvacc=2000, wait=False)
-            ret = arm.set_position_aa(axis_angle_pose=[0, 0, 0, 0, dTilt, dPan], speed=500, relative=True, wait=False)
+            if time.time() - tLastUpdated > updateInterval:
+                # arm.set_position(pitch=dTilt, roll=dPan, relative=True, speed=500, mvacc=2000, wait=False)
+                ret = arm.set_position_aa(axis_angle_pose=[0, 0, 0, 0, dTilt, dPan], speed=500, relative=True, wait=False)
+                tLastUpdated = time.time()
+
+            # rotate joint J1
+
+            # destAngle = arm.angles
+            # weight=2.5
+            # print(dPan)
+            # destAngle[0] += weight*dPan #[(1.0-weight)*currAngle[i]+weight*frontAngle[i] for i in range(len(frontAngle))]
+            # arm.set_servo_angle(angle=destAngle, speed=params['angle_speed'], mvacc=params['angle_acc'], wait=False, radius=-1.0)
 
             # arm.set_tool_position(pitch=dTilt, wait=False)
             # move j1
             # code = arm.set_servo_angle(servo_id=1, angle=dPan, relative=True, is_radian=False, wait=True)
             # print(code)
+
+            timeLastSeen = time.time()
+            tLastUpdate = time.time()
+
+        else: 
+            timeElapsed = time.time() - timeLastSeen
+            cv2.putText(img, str(timeElapsed), (10, 70), 
+                font, 
+                fontScale,
+                fontColor,
+                thickness,
+                lineType)           
+            if timeElapsed > 1.0 and timeElapsed < 5.0:
+                # print("relaxing to front")
+                cv2.putText(img,"relaxing", (10, 90), 
+                    font, 
+                    fontScale,
+                    fontColor,
+                    thickness,
+                    lineType)
+
+                if time.time() - tLastUpdated > updateInterval:
+
+                    # relax to front position
+                    currAngle = arm.angles
+                    weight=0.9
+                    # weight = 0.25
+                    destAngle = [(1.0-weight)*currAngle[i]+weight*frontAngle[i] for i in range(len(frontAngle))]
+                    arm.set_servo_angle(angle=destAngle, speed=params['angle_speed'], mvacc=params['angle_acc'], wait=False, radius=-1.0)
+
+                    tLastUpdated = time.time()
+
+
+            # if timeElapsed > 5.0 and timeElapsed 
+            # elif timeElapsed > 5.0 and timeElapsed < 10.0:
+            #     cv2.putText(img,"looking down", (10, 70), 
+            #         font, 
+            #         fontScale,
+            #         fontColor,
+            #         thickness,
+            #         lineType)
+
+            #     currAngle = arm.angles
+            #     weight=0.5
+            #     destAngle = [(1.0-weight)*currAngle[i]+weight*downAngle[i] for i in range(len(downAngle))]
+            #     arm.set_servo_angle(angle=destAngle, speed=params['angle_speed'], mvacc=params['angle_acc'], wait=False, radius=-1.0)
+            # elif timeElapsed > 10.0:
+            #     # reset the clock
+            #     timeLastSeen = time.time()
+
 
         # Display video
         cv2.imshow('img', img)
