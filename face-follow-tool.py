@@ -233,15 +233,17 @@ while True:
 
         else: 
             timeElapsed = time.time() - timeLastSeen
-            cv2.putText(img, str(timeElapsed), (10, 70), 
+            cv2.putText(img, "{:.2f}".format(timeElapsed), (10, 70), 
                 font, 
                 fontScale,
                 fontColor,
                 thickness,
-                lineType)           
+                lineType)
+
             if timeElapsed > 1.0 and timeElapsed < 5.0:
+                
                 # print("relaxing to front")
-                cv2.putText(img,"relaxing", (10, 90), 
+                cv2.putText(img,"RELAXING", (10, 110), 
                     font, 
                     fontScale,
                     fontColor,
