@@ -13,12 +13,14 @@ import numpy as np
 bTest = False
 simulate = False
 
-liftHeight = 20.0#10.0#15.0
-liftSpeed = 200#500
-drawSpeed = 75
+liftHeight = 10.0#15.0
+liftSpeed = 500
+drawSpeed = 50
+#drawSpeed = 75# still jittery on circles
+drawRadius = 0.0
 drawAccel = 500
-pathChunkLength = 100#3#500#20 #10#25#100
-pauseTime = 0.1 #0.1 default
+pathChunkLength = 25#3#500#20 #10#25#100
+dwellTime = 0.0 #0.1 default
 
 debug = False
 
@@ -289,11 +291,10 @@ for path in paths:
 
 arm = XArmAPI('192.168.4.15')
 arm.connect()
-# arm.set_pause_time(0.3)
-arm.set_pause_time(pauseTime)
 arm.set_simulation_robot(on_off=simulate)
 arm.set_mode(0)
 arm.set_state(state=0)
+arm.set_pause_time(dwellTime)
 
 
 # Register error/warn changed callback
@@ -328,10 +329,10 @@ lookforward = [0.0, -45.0, 0.0, 0.0, 0.0, -45.0, 0.0]
 
 
 # go to look
-code = arm.set_servo_angle(angle=lookforward, speed=params['speed'], mvacc=params['acc'], wait=True, radius=-1.0)
+lookForward()
 
-arm.set_position(*rest, speed=params['speed'], wait=True)
-arm.set_position(*topleftup, speed=params['speed'], wait=True)
+arm.set_position(*rest, speed=liftSpeed, wait=True)
+# arm.set_position(*topleftup, speed=params['speed'], wait=True)
 
 
 # ==== DO ACTUAL DRAWING ====
@@ -347,18 +348,25 @@ try:
         start_point[2] += liftHeight
         print("path started: {}".format(start_point))
         # arm.set_position(*start_point, speed=params['speed'], wait=True)
-        # arm.set_position(*start_point, liftSpeed, wait=True)
-        arm.set_position(*start_point, liftSpeed, wait=False)
+        # arm.set_position(*start_point, speed=drawSpeed, mvacc=drawAccel, wait=False, radius=drawRadius)
+        arm.set_position(*start_point, speed=drawSpeed, mvacc=drawAccel, wait=False)
 
+        for point in path:
+            # position = calcArmPos(H, point)
+            # arm.set_position(*point, speed=drawSpeed, wait=True)
+            # arm.set_position(*point, speed=drawSpeed, wait=False, radius=0.1)
+            # arm.set_position(*point, wait=False, radius=0.1)
+            # arm.set_position(*point, wait=False, radius=None) # MoveLine, linear motion
+            arm.set_position(*point, wait=False, mvacc=drawAccel, radius=drawRadius) # MoveArcLine with interpolation, linear arc motion
 
-        for i in range(0, len(path), n):
-            streampoints = path[i:i+n]
+        # for i in range(0, len(path), n):
+        #     streampoints = path[i:i+n]
 
-            count += n
-            print("drawing {} points out of {}...".format(count, len(path)))
-            sys.stdout.flush()
+        #     print("drawing points {}:{} out of {}...".format(i, i+n-1, len(path)))
+        #     sys.stdout.flush()
 
-            code = arm.move_arc_lines(streampoints, speed=params['speed'], mvacc=params['acc'], times=1, wait=False)
+        #     code = arm.move_arc_lines(streampoints, speed=drawSpeed, mvacc=drawAccel, times=1, wait=True)
+        #     time.sleep(dwellTime)
 
             # code = arm.move_arc_lines(streampoints, speed=params['speed'], mvacc=params['acc'], times=1, wait=True)
             # if code != 0:
@@ -374,10 +382,21 @@ try:
         # lift pen in air before starting next path
         end_point = list(path[-1])
         end_point[2] += liftHeight
-        print("path ended: {}".format(end_point))
         # arm.set_position(*end_point, speed=params['speed'], wait=True)
-        # arm.set_position(*end_point, liftSpeed, wait=True)
-        arm.set_position(*end_point, liftSpeed, wait=False)
+        # arm.set_position(*end_point, speed=liftSpeed, mvacc=drawAccel, wait=True, radius=drawRadius)
+        arm.set_position(*end_point, speed=drawSpeed, mvacc=drawAccel, wait=True)
+
+        print("path ended, sent {} points".format(len(path)))#: {}".format(end_point))
+        sys.stdout.flush()
+
+        # time.sleep(dwellTime)
+        print("done")
+        sys.stdout.flush()        
+
+        while arm.get_is_moving():
+            print(".", end="")
+            sys.stdout.flush()
+            time.sleep(0.01)
 
 
 
