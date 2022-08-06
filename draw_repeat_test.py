@@ -20,8 +20,8 @@ drawSpeed = 50
 #drawSpeed = 75# still jittery on circles
 drawRadius = 0.0
 drawAccel = 500
-pathChunkLength = 25#3#500#20 #10#25#100
-dwellTime = 0.0 #0.1 default
+#pathChunkLength = 25#3#500#20 #10#25#100
+#dwellTime = 0.0 #0.1 default
 
 files = [
     "../data/frame00572.json",
@@ -43,8 +43,8 @@ params = {'speed': drawSpeed, 'acc': drawAccel, 'angle_speed': 500, 'angle_acc':
 frontAngle = [0, 2.5, 0, 37.3, 0, -57.3, 0]
 
 # define key positions and mapping to rectangle on paper
-
 rest = [250, 0, 120, 180, 0, 0]
+
 zheight = 112.1
 topleft = [222.7, -256.0, zheight, 180, 0, 0]
 topleftup = list(topleft)
@@ -264,7 +264,7 @@ arm.connect()
 arm.set_simulation_robot(on_off=simulate)
 arm.set_mode(0)
 arm.set_state(state=0)
-arm.set_pause_time(dwellTime)
+#arm.set_pause_time(dwellTime)
 
 
 # Register error/warn changed callback
@@ -360,7 +360,7 @@ while True:
 
             for path in new_paths:
 
-                n = pathChunkLength
+                # n = pathChunkLength
                 count = 0
                 
                 # move to start with pen in air

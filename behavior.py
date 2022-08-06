@@ -20,6 +20,7 @@ import traceback
 import threading
 import cv2
 import time
+import numpy as np
 
 # ==== Configuration ====
 FACE = 0
@@ -31,11 +32,16 @@ DRAW = 2
 # downAngle = [0.4, 5.6, -1.0, 110.1, 2.3, 101.6, -0.1]
 # downPos = [467.8, 0.1, 589.1, -179.9, -1.5, 0]
 frontAngle = [0, 2.5, 0, 37.3, 0, -57.3, 0]
-downAngle = [-0.2, -0.4, 0, 92.7, 1.1, 81.1 -0.2]
+# downAngle = [-0.2, -0.4, 0, 92.7, 1.1, 81.1 -0.2]
+# downAngle = [0, 1.8, 0, 100, 0.1, 96.7, 0]
+downAngle = [0.8, -0.9, 0.8, 78.8, 0.1, 78.3, 1.5]
 downPos = [467.8, 7, 569.1, -179.9, -1.5, 0]
 
 variables = {}
-params = {'speed': 800, 'acc': 2000, 'angle_speed': 500, 'angle_acc': 1000, 'events': {}, 'variables': variables, 'callback_in_thread': True, 'quit': False}
+# ISEA
+# params = {'speed': 800, 'acc': 2000, 'angle_speed': 75, 'angle_acc': 1000, 'events': {}, 'variables': variables, 'callback_in_thread': True, 'quit': False} # ISEA
+# SIGGRAPH
+params = {'speed': 100, 'acc': 2000, 'angle_speed': 75, 'angle_acc': 500, 'events': {}, 'variables': variables, 'callback_in_thread': True, 'quit': False}
 # params = {'speed': 500, 'acc': 2000, 'angle_speed': 1000, 'angle_acc': 5000, 'events': {}, 'variables': variables, 'callback_in_thread': True, 'quit': False}
 # params = {'speed': 100, 'acc': 2000, 'angle_speed': 20, 'angle_acc': 500, 'events': {}, 'variables': variables, 'callback_in_thread': True, 'quit': False}
 
@@ -53,11 +59,26 @@ robotZ = 400.0
 bStarted = False
 startTime = 0
 timeLastSeen = 0
-timeLookFace = 20.0
-timeLookPaper = 30.0
+# ISEA timings
+# timeLookFace = 20.0
+# timeLookPaper = 30.0
+timeLookFace = 5.0
+timeLookPaper = 5.0
 bCloseFace = False
 timeSeenClose = 0
 timeLookClose = 5.0
+
+bMadeDrawing = False
+
+# Robot Params (speed etc.)
+drawSpeed = 50
+rapidSpeed = 500
+rapidAccel = 1000
+
+
+# timing of robot control signal
+updateInterval = 0.1
+tLastUpdated = time.time()
 
 # ==== Setup Robot ====
 
@@ -131,14 +152,15 @@ arm.register_connect_changed_callback(connect_changed_callback)
 def lookDown(): 
     if arm.error_code == 0 and not params['quit']:
         # code = arm.set_servo_angle(angle=downAngle, speed=params['angle_speed'], mvacc=params['angle_acc'], wait=True, radius=-1.0)
-        code = arm.set_position(*downPos, speed=params['speed'], wait=True)       
+        code = arm.set_servo_angle(angle=downAngle, speed=rapidSpeed, mvacc=params['angle_acc'], wait=True, radius=-1.0)
+        # code = arm.set_position(*downPos, speed=rapidSpeed, mvacc=rapidAccel, wait=True)       
         if code != 0:
             params['quit'] = True
             pprint('set_servo_angle, code={}'.format(code))
 
 def lookForward():
     if arm.error_code == 0 and not params['quit']:
-        code = arm.set_servo_angle(angle=frontAngle, speed=params['angle_speed'], mvacc=params['angle_acc'], wait=True, radius=-1.0)
+        code = arm.set_servo_angle(angle=frontAngle, speed=rapidSpeed, mvacc=params['angle_acc'], wait=True, radius=-1.0)
         if code != 0:
             params['quit'] = True
             pprint('set_servo_angle, code={}'.format(code))
@@ -150,6 +172,45 @@ if not params['quit']:
     params['angle_speed'] = 50
     # if params['quit']:
     lookForward()
+
+# ==== Setup Drawing Stuff ====
+# define key positions and mapping to rectangle on paper
+rest = [250, 0, 120, 180, 0, 0]
+
+zheight = 112.1
+liftHeight = 10.0#15.0
+topleft = [222.7, -256.0, zheight, 180, 0, 0]
+topleftup = list(topleft)
+topleftup[2]+=liftHeight
+botleft = [557.2, -256.0, zheight, 180.0, 0.0, 0.0]
+botright = [563.1, 250.0, zheight, 180.0, 0.0, 0.0]
+topright = [240.7, 250.0, zheight, 180.0, 0.0, 0.0]
+
+# Create Transform
+# points1=np.array([[0.0,0.0], [0.0, 1.0], [1.0, 1.0], [1.0, 0.0]])
+points1=np.array([[-0.176,0], [-0.176, 1.0], [1.176, 1.0], [1.176, 0]])
+points2=np.array([topleft[:2], botleft[:2], botright[:2], topright[:2]])
+
+
+# Drawing Helper Functions
+
+def calcTransformed(matrix, p):
+    px = (matrix[0][0]*p[0] + matrix[0][1]*p[1] + matrix[0][2]) / ((matrix[2][0]*p[0] + matrix[2][1]*p[1] + matrix[2][2]))
+    py = (matrix[1][0]*p[0] + matrix[1][1]*p[1] + matrix[1][2]) / ((matrix[2][0]*p[0] + matrix[2][1]*p[1] + matrix[2][2]))
+    p_after = (int(px), int(py))
+    return p_after
+
+def calcArmPos(matrix, p):
+    p_after = calcTransformed(matrix, p)
+    position = [p_after[0], p_after[1], zheight, 180.0, 0.0, 0.0] # no radius
+    # position = [p_after[0], p_after[1], zheight, 180.0, 0.0, 0.0, 1.0] # radio, I plan motion (?)
+    return position
+
+# calculate transform to robot arm space
+
+# reference https://www.pythonpool.com/cv2-findhomography/
+H, status = cv2.findHomography(points1, points2)
+# print(H, status)
 
 # ==== Setup OpenCV / Vision ====
 
@@ -182,7 +243,33 @@ while True:
     _, img = cap.read()
 
     if robotBehavior == DRAW: 
-        
+        # drawing is a blocking behavior
+
+        cv2.putText(img,"RELAXING", (10, 210), 
+            font, 
+            fontScale,
+            fontColor,
+            thickness,
+            lineType)
+
+        arm.set_position(*rest, speed=rapidSpeed, wait=True)
+        arm.set_position(*topleftup, speed=rapidSpeed, wait=True)
+
+        # points = [ (0, 0), (0, 1), (1, 1), (1, 0), (0, 0)]
+        points=[[-0.176,0], [-0.176, 1.0], [1.176, 1.0], [1.176, 0], [-0.176,0]]
+
+
+        for point in points:
+            position = calcArmPos(H, point)
+            arm.set_position(*position, speed=400, wait=True)
+            # arm.set_position(*position, speed=drawSpeed, wait=True)
+            print("moving to %s" % position)
+
+        lookForward()
+        bStarted = False
+        robotBehavior = FACE
+        startTime = time.time()
+
         # render our image here
         pass
 
@@ -194,7 +281,7 @@ while True:
                 # look down
                 if not bStarted:
                     startTime = time.time()
-                    lookForward()
+                    # lookForward()
                     lookDown()
                     bStarted = True
 
@@ -204,8 +291,9 @@ while True:
                 # decide when it is empty again
 
                 if time.time() - startTime > timeLookPaper:
-                    robotBehavior = FACE
+                    # robotBehavior = FACE
                     lookForward()
+                    robotBehavior = DRAW
                     bStarted = False
                     startTime = time.time()
 
@@ -252,23 +340,23 @@ while True:
                     offsetX = (0.5*capWidth-(x+w*0.5))/capWidth
                     offsetY = (0.5*capHeight-(y+h*0.5))/capHeight
                     
-                    dTilt = -3.0*offsetY
-                    dPan = 3.0*offsetX
+                    scale = 7.0
+                    dTilt = -1.0*scale*offsetY
+                    dPan = scale*offsetX
                     
-                    # accumulate tilt and Pan
-                    # tiltAng += -0.05 * offsetY
-                    # panAng += 0.042 * offsetX
-
                     # add front back moves
                     #print(dTilt, dPan)
                     # print('* position:', arm.position)
 
                     cv2.rectangle(img, (x, y), (x+w, y+h), (255, 255, 0), 10)
 
-                    # arm.set_position(pitch=dTilt, roll=dPan, relative=True, speed=500, mvacc=2000, wait=False)
-                    
-                    # better motion
-                    ret = arm.set_position_aa(axis_angle_pose=[0, 0, 0, 0, dTilt, dPan], speed=700, relative=True, wait=False, radius=1.0)
+
+                    if time.time() - tLastUpdated > updateInterval:
+                        # arm.set_position(pitch=dTilt, roll=dPan, relative=True, speed=500, mvacc=2000, wait=False)
+                        # better motion
+                        ret = arm.set_position_aa(axis_angle_pose=[0, 0, 0, 0, dTilt, dPan], speed=500, relative=True, wait=False)
+                        tLastUpdated = time.time()
+
                     
                     # CHECK IF WE ARE CLOSE
                     if maxSize > 400:
@@ -283,11 +371,6 @@ while True:
                             bStarted = False
                             bCloseFace = False
 
-
-
-                    # arm.set_position(pitch=dTilt, roll=dPan, relative=True, speed=500, mvacc=2000, wait=False)
-                    
-
                     # DOESN'T WORK
                     # dollyX = offsetX
                     # dollyZ = offsetY
@@ -297,28 +380,68 @@ while True:
                     # move j1
                     # code = arm.set_servo_angle(servo_id=1, angle=dPan, relative=True, is_radian=False, wait=True)
                     # print(code)
+
+                    timeLastSeen = time.time()
+                    tLastUpdate = time.time()
                     
                 else:
-                    if bStarted: 
-                        bStarted = False
-                        timeLastSeen = time.time()
 
-                    if not bStarted and time.time()-timeLastSeen > 3.0:
-                        # lost face, reset timer
-                        startTime = time.time()
+                    timeElapsed = time.time() - timeLastSeen
+                    cv2.putText(img, "{:.2f}".format(timeElapsed), (10, 170), 
+                        font, 
+                        fontScale,
+                        fontColor,
+                        thickness,
+                        lineType)
 
-                        # move back to center
-                        # lookForward()
+                    if timeElapsed > 1.0 and timeElapsed < 5.0:
+                        
+                        # print("relaxing to front")
+                        cv2.putText(img,"RELAXING", (10, 210), 
+                            font, 
+                            fontScale,
+                            fontColor,
+                            thickness,
+                            lineType)
 
-                        # relax to front position
-                        currAngle = arm.angles
-                        weight=0.05
-                        destAngle = [(1.0-weight)*currAngle[i]+weight*frontAngle[i] for i in range(len(frontAngle))]
-                        arm.set_servo_angle(angle=destAngle, speed=params['angle_speed'], mvacc=params['angle_acc'], wait=False, radius=-1.0)            
+                        if time.time() - tLastUpdated > updateInterval:
 
-                if time.time() - startTime > timeLookFace: 
-                    robotBehavior = PAPER
-                    bStarted = False
+                            # relax to front position
+                            currAngle = arm.angles
+                            weight=0.9
+                            # weight = 0.25
+                            destAngle = [(1.0-weight)*currAngle[i]+weight*frontAngle[i] for i in range(len(frontAngle))]
+                            arm.set_servo_angle(angle=destAngle, speed=params['angle_speed'], mvacc=params['angle_acc'], wait=False, radius=-1.0)
+
+                            tLastUpdated = time.time()
+
+                    # elif timeElapsed >= 5.0:
+                    #     # switch to draw
+                    #     lookForward()
+                    #     robotBehavior = DRAW
+                    #     bStarted = False
+                        
+
+                    # if bStarted: 
+                    #     bStarted = False
+                    #     timeLastSeen = time.time()
+
+                    # if not bStarted and time.time()-timeLastSeen > 3.0:
+                    #     # lost face, reset timer
+                    #     startTime = time.time()
+
+                    #     # move back to center
+                    #     # lookForward()
+
+                    #     # relax to front position
+                    #     currAngle = arm.angles
+                    #     weight=0.05
+                    #     destAngle = [(1.0-weight)*currAngle[i]+weight*frontAngle[i] for i in range(len(frontAngle))]
+                    #     arm.set_servo_angle(angle=destAngle, speed=params['angle_speed'], mvacc=params['angle_acc'], wait=False, radius=-1.0)            
+
+                # if time.time() - startTime > timeLookFace: 
+                #     robotBehavior = PAPER
+                #     bStarted = False
 
         cv2.putText(img,"state: {} time: {:.2f}".format(robotBehavior, time.time() - startTime), (10, 70), 
             font, 
