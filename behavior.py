@@ -66,7 +66,9 @@ timeLookFace = 5.0
 timeLookPaper = 5.0
 bCloseFace = False
 timeSeenClose = 0
-timeLookClose = 5.0
+
+# timeLookClose = 5.0 # ISEA
+timeLookClose = 1.5
 
 bMadeDrawing = False
 
@@ -173,7 +175,8 @@ if not params['quit']:
     # if params['quit']:
     lookForward()
 
-# ==== Setup Drawing Stuff ====
+# ==== Drawing Helpers and Parameters ====
+
 # define key positions and mapping to rectangle on paper
 rest = [250, 0, 120, 180, 0, 0]
 
@@ -186,13 +189,22 @@ botleft = [557.2, -256.0, zheight, 180.0, 0.0, 0.0]
 botright = [563.1, 250.0, zheight, 180.0, 0.0, 0.0]
 topright = [240.7, 250.0, zheight, 180.0, 0.0, 0.0]
 
-# Create Transform
-# points1=np.array([[0.0,0.0], [0.0, 1.0], [1.0, 1.0], [1.0, 0.0]])
-points1=np.array([[-0.176,0], [-0.176, 1.0], [1.176, 1.0], [1.176, 0]])
-points2=np.array([topleft[:2], botleft[:2], botright[:2], topright[:2]])
+# Buffer to store drawing
+
+# colors
+WHITE = (255, 255, 255)
+BLUE = (255, 255, 0)
+BLACK = (0, 0, 0)
+
+# blank image 
+outheight = 720
+outwidth = 1280
+penpathImage = np.zeros((outheight, outwidth, 3), np.uint8)
+cv2.rectangle(penpathImage, (0,0), (outheight, outwidth), WHITE, cv2.FILLED)
+linewidth = 3
 
 
-# Drawing Helper Functions
+# Geometry Transformation and Helpers
 
 def calcTransformed(matrix, p):
     px = (matrix[0][0]*p[0] + matrix[0][1]*p[1] + matrix[0][2]) / ((matrix[2][0]*p[0] + matrix[2][1]*p[1] + matrix[2][2]))
@@ -207,6 +219,8 @@ def calcArmPos(matrix, p):
     return position
 
 # calculate transform to robot arm space
+points1=np.array([[-0.176,0], [-0.176, 1.0], [1.176, 1.0], [1.176, 0]])
+points2=np.array([topleft[:2], botleft[:2], botright[:2], topright[:2]])
 
 # reference https://www.pythonpool.com/cv2-findhomography/
 H, status = cv2.findHomography(points1, points2)
@@ -241,25 +255,30 @@ while True:
 
     # Read the frame
     _, img = cap.read()
-
+    
     if robotBehavior == DRAW: 
         # drawing is a blocking behavior
 
-        cv2.putText(img,"RELAXING", (10, 210), 
-            font, 
-            fontScale,
-            fontColor,
-            thickness,
-            lineType)
+        # cv2.rectangle(penpathImage, (0,0), (outheight, outwidth), WHITE, cv2.FILLED)
+        # cv2.imshow('img', penpathImage)
+
+        # cv2.putText(penpathImage,"DRAWING", (10, 210), 
+        #     font, 
+        #     fontScale,
+        #     fontColor,
+        #     thickness,
+        #     lineType)
 
         arm.set_position(*rest, speed=rapidSpeed, wait=True)
         arm.set_position(*topleftup, speed=rapidSpeed, wait=True)
 
         # points = [ (0, 0), (0, 1), (1, 1), (1, 0), (0, 0)]
-        points=[[-0.176,0], [-0.176, 1.0], [1.176, 1.0], [1.176, 0], [-0.176,0]]
+        path=[[-0.176,0], [-0.176, 1.0], [1.176, 1.0], [1.176, 0], [-0.176,0]]
 
-
-        for point in points:
+        lastpoint = (0, 0)
+        color=BLUE
+        
+        for point in path:
             position = calcArmPos(H, point)
             arm.set_position(*position, speed=400, wait=True)
             # arm.set_position(*position, speed=drawSpeed, wait=True)
@@ -268,7 +287,7 @@ while True:
         lookForward()
         bStarted = False
         robotBehavior = FACE
-        startTime = time.time()
+        timeLastSeen = time.time()
 
         # render our image here
         pass
@@ -285,14 +304,20 @@ while True:
                     lookDown()
                     bStarted = True
 
+                # flip image if we are looking at the paper
+                img = cv2.flip(img, -1)
+
                 cv2.rectangle(img, (160, 0), (1760, 1080), (255, 255, 0), 10)
 
                 # look for changes on paper
                 # decide when it is empty again
+                # DECIDE IF IT IS EMPTY THEN: 
+                # - Y add a drawing
+                # - N engage the viewer
 
                 if time.time() - startTime > timeLookPaper:
                     # robotBehavior = FACE
-                    lookForward()
+                    # lookForward()
                     robotBehavior = DRAW
                     bStarted = False
                     startTime = time.time()
@@ -365,11 +390,11 @@ while True:
                             bCloseFace = True
                             timeSeenClose = time.time()
 
-                        if time.time() - timeSeenClose > timeLookClose:
-                            # switch to look at paper
-                            robotBehavior = PAPER
-                            bStarted = False
-                            bCloseFace = False
+                        # if time.time() - timeSeenClose > timeLookClose:
+                        #     # switch to look at paper
+                        #     robotBehavior = PAPER
+                        #     bStarted = False
+                        #     bCloseFace = False
 
                     # DOESN'T WORK
                     # dollyX = offsetX
@@ -414,6 +439,14 @@ while True:
                             arm.set_servo_angle(angle=destAngle, speed=params['angle_speed'], mvacc=params['angle_acc'], wait=False, radius=-1.0)
 
                             tLastUpdated = time.time()
+
+
+                    if time.time() - timeSeenClose > timeLookClose:
+                        # switch to look at paper
+                        robotBehavior = PAPER
+                        bStarted = False
+                        bCloseFace = False
+
 
                     # elif timeElapsed >= 5.0:
                     #     # switch to draw
