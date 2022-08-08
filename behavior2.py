@@ -38,7 +38,7 @@ robotState = ASSESS_DRAWN #PERSON
 # 4 - rest
 
 FACE_TIMEOUT = 10.0 # how long does a person have to disappear for the system to reset
-ENGAGEMENT_TIME = 10.0 # how long does a person have to be seen by the robot for the cycle to start
+ENGAGEMENT_TIME = 7.0 # how long does a person have to be seen by the robot for the cycle to start
 REST_TIMEOUT = 20.0 # how long do we rest when we are done drawing
 ERASED_TIMEOUT = 5.0 # how soon do we start over when everything is erased
 DRAWN_TIMEOUT = 15.0 # how long does the human have to draw
