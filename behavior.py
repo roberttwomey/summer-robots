@@ -19,7 +19,9 @@ import simplejson
 
 
 # ==== STATES ====
-CAMERA_NUM = 2
+CAMERA_NUM = 2 # laptop
+# CAMERA_NUM = 0 # mac mini
+
 
 PERSON = 0
 DRAW = 1
