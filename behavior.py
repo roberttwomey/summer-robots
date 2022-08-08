@@ -252,7 +252,8 @@ files = [
     "data/sample01.json",
     "data/frame00868.json",
     "data/frame00802.json",
-    "data/frame00640.json"
+    "data/frame00640.json",
+    "data/frame00615.json"
     ]
 
 # polygon loading / sorting
