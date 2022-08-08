@@ -1,16 +1,10 @@
 #!/usr/bin/env python3
-# Software License Agreement (BSD License)
 #
-# Copyright (c) 2022, UFACTORY, Inc.
-# All rights reserved.
+# Program that alternates between a number of behaviors for the robot arm. 
+# as a part of the Three Stage Drawing Transfer, interactive artwork. 
 #
-# Author: Vinman <vinman.wen@ufactory.cc> <vinman.cub@gmail.com>
+# Robert Twomey - roberttwomey.com - 2022
 
-"""
-# Notice
-#   1. Changes to this file on Studio will not be preserved
-#   2. The next conversion will overwrite the file with the same name
-"""
 import sys
 import math
 import time
@@ -22,32 +16,33 @@ import cv2
 import time
 import numpy as np
 
-# ==== Configuration ====
+# ==== STATES ====
+CAMERA_NUM = 2
+
 FACE = 0
 PAPER = 1
 DRAW = 2
 REST = 3
 
-REST_INTERVAL = 20.0
+# order of operations
+# 1 - scan for faces
+# 2 - look for drawing
+# 3 - add to drawing
+# 4 - rest
 
-# frontAngle = [0.1, -34.9, -0.1, 1.6, 0, -63.5, 0.1]
-# frontAngle = [0.2, 4.7, -0.2, 39.1, 0, -60.0]
-# downAngle = [0.4, 5.6, -1.0, 110.1, 2.3, 101.6, -0.1]
-# downPos = [467.8, 0.1, 589.1, -179.9, -1.5, 0]
+FACE_INTERVAL = 5.0
+REST_INTERVAL = 10.0
+timeLookClose = 1.5
+
+# joint angle descriptions of front look and down look
 frontAngle = [0, 2.5, 0, 37.3, 0, -57.3, 0]
-# downAngle = [-0.2, -0.4, 0, 92.7, 1.1, 81.1 -0.2]
-# downAngle = [0, 1.8, 0, 100, 0.1, 96.7, 0]
 downAngle = [0.8, -0.9, 0.8, 78.8, 0.1, 78.3, 1.5]
 downPos = [467.8, 7, 569.1, -179.9, -1.5, 0]
 
 variables = {}
-# ISEA
-# params = {'speed': 800, 'acc': 2000, 'angle_speed': 75, 'angle_acc': 1000, 'events': {}, 'variables': variables, 'callback_in_thread': True, 'quit': False} # ISEA
+
 # SIGGRAPH
 params = {'speed': 100, 'acc': 2000, 'angle_speed': 75, 'angle_acc': 500, 'events': {}, 'variables': variables, 'callback_in_thread': True, 'quit': False}
-# params = {'speed': 500, 'acc': 2000, 'angle_speed': 1000, 'angle_acc': 5000, 'events': {}, 'variables': variables, 'callback_in_thread': True, 'quit': False}
-# params = {'speed': 100, 'acc': 2000, 'angle_speed': 20, 'angle_acc': 500, 'events': {}, 'variables': variables, 'callback_in_thread': True, 'quit': False}
-
 
 closeSizeCutoff = 250.0
 
@@ -62,17 +57,9 @@ robotZ = 400.0
 bStarted = False
 startTime = 0
 timeLastSeen = 0
-# ISEA timings
-# timeLookFace = 20.0
-# timeLookPaper = 30.0
-timeLookFace = 5.0
 timeLookPaper = 5.0
 bCloseFace = False
 timeSeenClose = 0
-
-# timeLookClose = 5.0 # ISEA
-timeLookClose = 1.5
-
 bMadeDrawing = False
 
 # Robot Params (speed etc.)
@@ -241,7 +228,7 @@ H, status = cv2.findHomography(points1, points2)
 # ==== Setup OpenCV / Vision ====
 
 # To capture video from webcam. 
-cap = cv2.VideoCapture(1) # choose the proper camera number
+cap = cv2.VideoCapture(CAMERA_NUM) # choose the proper camera number
 # cap = cv2.VideoCapture(1) # facetime camera
 # To use a video file as input 
 # cap = cv2.VideoCapture('filename.mp4')
@@ -265,9 +252,6 @@ panAng = 5
 
 while True:
 
-    # Read the frame
-    _, img = cap.read()
-    
     if robotBehavior == DRAW: 
         # drawing is a blocking behavior
 
@@ -298,7 +282,7 @@ while True:
         # robotBehavior = FACE
 
         # go to rest pos and wait
-        
+
         bStarted = False
         robotBehavior = REST
         startTime = time.time()
@@ -313,9 +297,13 @@ while True:
             timeLastSeen = time.time()
     else:
         
+        # Read the frame
+        _, img = cap.read()
+    
         if img is not None:
             
             if robotBehavior == PAPER:
+                
                 # look down
                 if not bStarted:
                     startTime = time.time()
@@ -526,3 +514,17 @@ arm.release_error_warn_changed_callback(state_changed_callback)
 arm.release_state_changed_callback(state_changed_callback)
 arm.release_connect_changed_callback(error_warn_change_callback)
 
+
+## LEFTOVERS
+
+# ISEA
+# params = {'speed': 800, 'acc': 2000, 'angle_speed': 75, 'angle_acc': 1000, 'events': {}, 'variables': variables, 'callback_in_thread': True, 'quit': False} # ISEA
+# params = {'speed': 500, 'acc': 2000, 'angle_speed': 1000, 'angle_acc': 5000, 'events': {}, 'variables': variables, 'callback_in_thread': True, 'quit': False}
+# params = {'speed': 100, 'acc': 2000, 'angle_speed': 20, 'angle_acc': 500, 'events': {}, 'variables': variables, 'callback_in_thread': True, 'quit': False}
+
+# frontAngle = [0.1, -34.9, -0.1, 1.6, 0, -63.5, 0.1]
+# frontAngle = [0.2, 4.7, -0.2, 39.1, 0, -60.0]
+# downAngle = [0.4, 5.6, -1.0, 110.1, 2.3, 101.6, -0.1]
+# downPos = [467.8, 0.1, 589.1, -179.9, -1.5, 0]
+# downAngle = [-0.2, -0.4, 0, 92.7, 1.1, 81.1 -0.2]
+# downAngle = [0, 1.8, 0, 100, 0.1, 96.7, 0]

@@ -22,6 +22,8 @@ import cv2
 
 
 # ==== Configuration ====
+CAMERA_NUM = 2
+
 FACE = 0
 PAPER = 1
 DRAW = 2
@@ -133,7 +135,7 @@ if not params['quit']:
 # ==== Setup OpenCV / Vision ====
 
 # To capture video from webcam. 
-cap = cv2.VideoCapture(1)
+cap = cv2.VideoCapture(CAMERA_NUM)
 # To use a video file as input 
 # cap = cv2.VideoCapture('filename.mp4')
 
