@@ -30,7 +30,12 @@ files = [
     "data/frame02520.json",
     "data/frame02901.json",
     "data/GAN_sample02.json",
-    "data/sample01.json"
+    "data/sample01.json",
+    "data/frame00868.json",
+    "data/frame00802.json",
+    "data/frame00640.json",
+    "data/frame00615.json",
+    "data/frame00480.json"
     ]
 
 debug = False
