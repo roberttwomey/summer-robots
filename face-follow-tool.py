@@ -133,7 +133,7 @@ if not params['quit']:
 # ==== Setup OpenCV / Vision ====
 
 # To capture video from webcam. 
-cap = cv2.VideoCapture(2)
+cap = cv2.VideoCapture(1)
 # To use a video file as input 
 # cap = cv2.VideoCapture('filename.mp4')
 

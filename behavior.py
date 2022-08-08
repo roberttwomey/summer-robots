@@ -26,6 +26,9 @@ import numpy as np
 FACE = 0
 PAPER = 1
 DRAW = 2
+REST = 3
+
+REST_INTERVAL = 20.0
 
 # frontAngle = [0.1, -34.9, -0.1, 1.6, 0, -63.5, 0.1]
 # frontAngle = [0.2, 4.7, -0.2, 39.1, 0, -60.0]
@@ -151,6 +154,15 @@ def connect_changed_callback(data):
         arm.release_connect_changed_callback(error_warn_change_callback)
 arm.register_connect_changed_callback(connect_changed_callback)
 
+
+def goZero(): 
+    if arm.error_code == 0 and not params['quit']:
+        code = arm.set_servo_angle(angle=[0.0, 0, 0.0, 0.0, 0.0, 0.0, 0.0], speed=params['angle_speed'], mvacc=params['angle_acc'], wait=True, radius=-1.0)
+        if code != 0:
+            params['quit'] = True
+            pprint('set_servo_angle, code={}'.format(code))
+
+
 def lookDown(): 
     if arm.error_code == 0 and not params['quit']:
         # code = arm.set_servo_angle(angle=downAngle, speed=params['angle_speed'], mvacc=params['angle_acc'], wait=True, radius=-1.0)
@@ -229,7 +241,7 @@ H, status = cv2.findHomography(points1, points2)
 # ==== Setup OpenCV / Vision ====
 
 # To capture video from webcam. 
-cap = cv2.VideoCapture(2) # most recent external camera
+cap = cv2.VideoCapture(1) # choose the proper camera number
 # cap = cv2.VideoCapture(1) # facetime camera
 # To use a video file as input 
 # cap = cv2.VideoCapture('filename.mp4')
@@ -275,9 +287,7 @@ while True:
         # points = [ (0, 0), (0, 1), (1, 1), (1, 0), (0, 0)]
         path=[[-0.176,0], [-0.176, 1.0], [1.176, 1.0], [1.176, 0], [-0.176,0]]
 
-        lastpoint = (0, 0)
-        color=BLUE
-        
+        # render our image here
         for point in path:
             position = calcArmPos(H, point)
             arm.set_position(*position, speed=400, wait=True)
@@ -285,13 +295,22 @@ while True:
             print("moving to %s" % position)
 
         lookForward()
+        # robotBehavior = FACE
+
+        # go to rest pos and wait
+        
         bStarted = False
-        robotBehavior = FACE
-        timeLastSeen = time.time()
-
-        # render our image here
-        pass
-
+        robotBehavior = REST
+        startTime = time.time()
+        goZero()
+        
+    
+    elif robotBehavior == REST: 
+        if time.time() - startTime > REST_INTERVAL:
+            lookForward()
+            robotBehavior = FACE
+            bStarted = False
+            timeLastSeen = time.time()
     else:
         
         if img is not None:
