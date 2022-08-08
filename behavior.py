@@ -15,14 +15,21 @@ import threading
 import cv2
 import time
 import numpy as np
+import simplejson
+
 
 # ==== STATES ====
 CAMERA_NUM = 2
 
-FACE = 0
-ASSESS = 1
-DRAW = 2
-REST = 3
+PERSON = 0
+DRAW = 1
+REST = 2
+# ASSESS = 1
+ASSESS_ERASED=3
+ASSESS_DRAWN=4
+
+# robotState = PERSON
+robotState = ASSESS_ERASED
 
 # order of operations
 # 1 - scan for faces
@@ -30,9 +37,14 @@ REST = 3
 # 3 - add to drawing
 # 4 - rest
 
-FACE_INTERVAL = 5.0
-REST_INTERVAL = 1.0
-ASSESS_INTERVAL = 20.0
+FACE_TIMEOUT = 10.0 # how long does a person have to disappear for the system to reset
+ENGAGEMENT_TIME = 5.0 # how long does a person have to be seen by the robot for the cycle to start
+REST_TIMEOUT = 20.0 # how long do we rest when we are done drawing
+ERASED_TIMEOUT = 10.0 # how soon do we start over when everything is erased
+DRAWN_TIMEOUT = 15.0 # how long does the human have to draw
+
+DRAWN_LENGTH = 10000.0 # perimeter at least 10kpx long to be adequate human drawing
+ERASED_LENGTH = 1000.0 # perimeter for when it is erased
 
 timeLookClose = 1.5
 
@@ -51,10 +63,9 @@ params = {'speed': 100, 'acc': 2000, 'angle_speed': 75, 'angle_acc': 500, 'event
 closeSizeCutoff = 250.0
 
 showDebug = True
+verbose = False
 
 # State
-robotBehavior = FACE
-
 robotX = 424.0
 robotY = 0
 robotZ = 400.0
@@ -67,6 +78,8 @@ bMadeDrawing = False
 
 # Robot Params (speed etc.)
 drawSpeed = 50
+drawRadius = 0.0
+drawAccel = 500
 rapidSpeed = 500
 rapidAccel = 1000
 
@@ -179,7 +192,7 @@ if not params['quit']:
 
 # ==== Drawing Helpers and Parameters ====
 
-# define key positions and mapping to rectangle on ASSESS
+# define key positions and mapping to rectangle on page
 rest = [250, 0, 120, 180, 0, 0]
 
 zheight = 112.1
@@ -191,8 +204,8 @@ botleft = [557.2, -256.0, zheight, 180.0, 0.0, 0.0]
 botright = [563.1, 250.0, zheight, 180.0, 0.0, 0.0]
 topright = [240.7, 250.0, zheight, 180.0, 0.0, 0.0]
 
-# Buffer to store drawing
 
+# Buffer to store drawing
 # colors
 WHITE = (255, 255, 255)
 BLUE = (255, 255, 0)
@@ -228,16 +241,208 @@ H, status = cv2.findHomography(points1, points2)
 # print(H, status)
 
 
+# ==== Drawing File Loading
+
+files = [
+    "../data/frame00572.json",
+    "../data/frame00640.json",
+    "../data/frame01463.json",
+    "../data/GAN_sample02.json",
+    "../data/sample01.json",
+    "../data/frame00237.json"
+    ]
+
+# polygon loading / sorting
+def readJSON(filename, width=224.0, height=224.0):
+    with open (filename, "r") as myfile:
+        data = myfile.read()
+
+    pydata = simplejson.loads(data)
+    # print(len(pydata))
+    minlen = 0.00001
+
+    paths_out = []
+    count = 0
+    for path in pydata:
+        thispath = []
+        bFirstPoint=True
+        for point in path:
+            # print(point)
+            # BAD TO HARDCODE THIS SCALE FACTOR
+            x = point['x']/width
+            y = point['y']/height*0.75+0.125
+            # print(x,y)
+            pos = np.array([x, y])
+            if bFirstPoint:
+                lastpos = pos
+                bFirstPoint = False
+
+            if np.linalg.norm(pos-lastpos) < minlen:
+                continue
+            else: 
+                lastpos = pos
+                thispath.append((x, y))
+            # thispath.append((x, y))
+            count+=1
+        
+        if(len(thispath) > 5):
+            paths_out.append(thispath)
+    
+    print("parsed {} paths with {} points in json file {}".format(len(pydata), count, filename))
+    return paths_out
+
+def readGeoJSON(filename):
+    with open (filename, "r") as myfile:
+        data = myfile.read()
+
+    pydata = simplejson.loads(data)
+
+    polys = [] 
+    minlen = 0.01
+    # maxlen = 0.25
+    bFirstPoint = True
+
+    for feat in pydata['features']:
+
+        coords = feat['geometry']['coordinates']
+        # print(len(coords))
+        pcount = 0
+        for path in coords:
+            # print("{}: {} of {}".format(len(path), pcount, len(coords)))
+            this_path = []
+            count = 0
+            pcount+=1
+            for point in path:
+                
+                x = point[0]/680.0
+                y = 0.875-(point[1]/512.0*0.752)
+
+                pos = np.array([x, y])
+
+                if bFirstPoint:
+                    lastpos = list(pos)
+                    bFirstPoint = False
+                    this_path.append((x, y))
+                    count+=1
+                else:
+                    dist = np.linalg.norm(pos-lastpos)
+
+                    if dist < minlen:
+                        continue
+                    else: 
+                        lastpos = list(pos)
+                        this_path.append((x, y))
+                        count+=1
+
+            if count > 2:
+                polys.append(this_path)
+
+    return polys
+
+
+def sortPaths(paths, longest=False):
+    """
+    Starting at 0,0, sorts all polys in array by nearest neighor,
+    flipping the beginning and ends if necessary.
+
+    Returns sorted poly array.
+    """
+    
+    print("starting sort...", end="")
+    sys.stdout.flush()
+
+    sortedpaths = []
+    used = [ False ] * len(paths)    
+    last = [0., 0.]
+    done = False
+    count = 0
+
+    while not done:
+        minlen = 99999
+        closest = -1
+        flipped = None
+        
+        for i, path in enumerate(paths):
+            #print(i, used[i])
+            
+            if not used[i]:
+                begin = paths[i][0] # first coordinate
+                end = paths[i][-1] # last coordinate
+                
+                beginlen = np.linalg.norm(np.array(begin)-np.array(last))
+                endlen = np.linalg.norm(np.array(end)-np.array(last)) 
+                if beginlen < minlen:
+                    closest = i
+                    flipped = False
+                    minlen = beginlen
+
+                if endlen < minlen:
+                    closest = i
+                    flipped = True
+                    minlen = endlen
+
+                if verbose:
+                    print("  testing {0}, len1: {1:.2f}\tlen2: {2:.2f}\tmin: {3:.2f}".format(i, beginlen, endlen, minlen))
+
+        # we have our victor
+        if verbose:
+            print("best {} flipped {} {:.2f}".format(closest, flipped, minlen))
+        if flipped:
+            sortedpaths.append(paths[closest][::-1])
+        else:
+            sortedpaths.append(paths[closest])
+
+        used[closest] = True
+        last = sortedpaths[-1][-1]
+        count = count + 1
+        sys.stdout.flush()
+        
+        if count == len(paths):
+            done = True
+
+    print("done. sorted {0} paths".format(count))
+
+    if longest:
+        sortedpaths.sort(key=len, reverse=True)
+    
+    return sortedpaths
+
+def renderAsImage(paths, filename, outwidth, outheight):
+    # colors
+    WHITE = (255, 255, 255)
+    BLUE = (255, 255, 0)
+    BLACK = (0, 0, 0)
+
+    outwidth *= 4
+    outheight *= 4
+
+    # blank image 
+    img = np.zeros((outheight, outwidth, 3), np.uint8)
+
+    cv2.rectangle(img, (0,0), (outheight, outwidth), WHITE, cv2.FILLED)
+    linewidth = 3
+
+    lastpoint = (0, 0)
+    color=BLUE
+    for path in paths:
+        for point in path:
+            cv2.line(img, (int(lastpoint[0]*outwidth), int(lastpoint[1]*outwidth)), (int(point[0]*outwidth), int(point[1]*outheight)), color, linewidth)
+            lastpoint = list(point)
+            color=BLACK
+        color=BLUE
+
+    print("Saving image {0}".format(filename))
+    cv2.imwrite(filename, img)
+
+
 # ==== OpenCV / Vision ====
 
 # To capture video from webcam
 cap = cv2.VideoCapture(CAMERA_NUM) # choose the proper camera number
-
 capWidth = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
 capHeight = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
-print(capWidth, capHeight)
 
-# Load the cascade
+# Load the face detection cascade
 face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
 
 # load text
@@ -266,9 +471,33 @@ def auto_canny(image, sigma=0.33):
     # return the edge image
     return edge
 
+def detectContours(img):
+    # detect contours
+    imgray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    blurred = cv2.blur(imgray, (3,3))
+    edged = auto_canny(blurred, 0.3)
+    # ret, thresh = cv2.threshold(imgray, 156, 255, 0)
+    ret, thresh = cv2.threshold(edged, 64, 255, 0)
+    contours, hierarchy = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    
+    # _, binary = cv2.threshold(blurred, 32, 255, cv2.THRESH_BINARY)
+    # contours, hierarchy = cv2.findContours(binary, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    
+    # find total perimeter
+    total = 0
+    for cntr in contours:
+        area = cv2.contourArea(cntr)
+        perimeter = cv2.arcLength(cntr, True)
+        total+=perimeter
+
+    return contours, total
+
+
+# ==== MAIN LOOP OF PROGRAM ====
+
 while True:
 
-    if robotBehavior == DRAW: 
+    if robotState == DRAW: 
         # drawing is a blocking behavior
 
         cv2.rectangle(penpathImage, (0,0), (outheight, outwidth), (255, 255, 255), cv2.FILLED)
@@ -285,29 +514,71 @@ while True:
         arm.set_position(*topleftup, speed=rapidSpeed, wait=True)
 
         # points = [ (0, 0), (0, 1), (1, 1), (1, 0), (0, 0)]
-        path=[[-0.176,0], [-0.176, 1.0], [1.176, 1.0], [1.176, 0], [-0.176,0]]
+        # path=[[-0.176,0], [-0.176, 1.0], [1.176, 1.0], [1.176, 0], [-0.176,0]]
 
-        # render our image here
-        for point in path:
-            position = calcArmPos(H, point)
-            arm.set_position(*position, speed=400, wait=True)
-            # arm.set_position(*position, speed=drawSpeed, wait=True)
-            print("moving to %s" % position)
+        infile = random.choice(files)
+
+        print(f"======== READING FILE #{infile} ========")
+
+        unsorted_paths = readJSON(infile, 908, 600)#681)
+        paths = sortPaths(unsorted_paths)
+
+        pngfile = infile.split(".json")[0]+"_paths.png"
+        renderAsImage(paths, pngfile, 1024, 1024)
+
+        new_paths=[]
+        for path in paths:
+            this_path = [] 
+            for point in path:
+                position = calcArmPos(H, point)
+                this_path.append(position)
+            new_paths.append(this_path)
+
+        for path in new_paths:
+            
+            # move to start with pen in air
+            start_point = list(path[0])
+            start_point[2] += liftHeight
+            print("path started...", end="")
+            sys.stdout.flush()
+            arm.set_position(*start_point, speed=drawSpeed, mvacc=drawAccel, wait=False)
+
+            # send points and make drawing
+            for point in path:
+                arm.set_position(*point, wait=False, mvacc=drawAccel, radius=drawRadius) # MoveArcLine with interpolation, linear arc motion
+                # print("moving to %s" % position)
+
+            # lift pen in air before starting next path
+            end_point = list(path[-1])
+            end_point[2] += liftHeight
+            # arm.set_position(*end_point, speed=params['speed'], wait=True)
+            # arm.set_position(*end_point, speed=rapidSpeed, mvacc=drawAccel, wait=True, radius=drawRadius)
+            arm.set_position(*end_point, speed=drawSpeed, mvacc=drawAccel, wait=True)
+
+            print("path ended, sent {} points".format(len(path)))#: {}".format(end_point))
+            sys.stdout.flush()
 
         lookForward()
-        # robotBehavior = FACE
+        # robotState = PERSON
 
-        # go to rest pos and wait
+        # # go to rest pos and wait
         bStarted = False
-        robotBehavior = REST
-        startTime = time.time()
-        goZero()
+        robotState = REST
         
+        # admire your handiwork and wait for someone to erase it
+        # bStarted = False
+        # robotState = ASSESS_ERASED
     
-    elif robotBehavior == REST: 
-        if time.time() - startTime > REST_INTERVAL:
+    elif robotState == REST: 
+        if not bStarted:
+            print("==== RESTING ====")
+            bStarted = True
+            startTime = time.time()
+            goZero()
+
+        if time.time() - startTime > REST_TIMEOUT:
             lookForward()
-            robotBehavior = FACE
+            robotState = PERSON
             bStarted = False
             timeLastSeen = time.time()
             startTime = time.time()
@@ -318,59 +589,96 @@ while True:
     
         if img is not None:
             
-            if robotBehavior == ASSESS:
+            if robotState == ASSESS_ERASED:
                 
-                # look down
+                # look down to see if they have erased the drawing
                 if not bStarted:
-                    startTime = time.time()
-                    # lookForward()
                     lookDown()
                     bStarted = True
+                    print("==== ASSESS_ERASED ====")
+                    bErased = False
 
-                # flip image if we are looking at the ASSESS
+                # flip image if we are looking at the paper
                 img = cv2.flip(img, -1)
 
-                # detect contours
-                imgray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-                blurred = cv2.blur(imgray, (3,3))
-                edged = auto_canny(blurred, 0.3)
-                # ret, thresh = cv2.threshold(imgray, 156, 255, 0)
-                ret, thresh = cv2.threshold(edged, 64, 255, 0)
-                contours, hierarchy = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-                
-                # find total perimeter
+                contours, total_perimeter = detectContours(img)
 
-                total = 0
-                for cntr in contours:
-                    area = cv2.contourArea(cntr)
-                    perimeter = cv2.arcLength(cntr, True)
-                    total+=perimeter
-
-                # subtract background
-                # print(len(contours))
-                cv2.putText(img,"{} contours of length {:.2f}".format(len(contours), total), (10, 170),
+                cv2.putText(img,"{} contours of length {:.2f}".format(len(contours), total_perimeter), (10, 170),
                             font, 
                             fontScale,
                             fontColor,
                             thickness,
                             lineType)
 
-                # cv2.drawContours(img, simple_contours, -1, (0,255,0), 3)
                 cv2.drawContours(img, contours, -1, (0,255,0), 3)
 
-                # if (time.time() - startTime > timeLookASSESS) and (len(contours) < 10):
-                if time.time() - startTime > ASSESS_INTERVAL and total < 1000:
-                    # robotBehavior = FACE
+                if total_perimeter < ERASED_LENGTH:
+                    if not bErased: 
+                        bErased = True
+                        startTime = time.time()
+                else: 
+                    bErased = False
+
+                if time.time() - startTime > ERASED_TIMEOUT and bErased:
+                    robotState = PERSON
+                    lookForward()
+                    bStarted = False
+
+                    # to oscillate between DRAW and ERASE to prompt machine to DRAW
+                    # robotState = DRAW
+                    # bStarted = False
+                    # startTime = time.time()
+
+                    # erase the image while drawing
+                    # cv2.rectangle(img, (0,0), (int(capWidth), int(capHeight)), (255, 255, 255), cv2.FILLED)
+                    
+            elif robotState == ASSESS_DRAWN:
+                
+                # look down
+                if not bStarted:
                     # lookForward()
-                    robotBehavior = DRAW
+                    lookDown()
+                    bStarted = True
+                    print("==== ASSESS_DRAWN ====")
+                    bDrawn = False
+
+                # flip image if we are looking at the paper
+                img = cv2.flip(img, -1)
+
+                contours, total_perimeter = detectContours(img)
+
+                cv2.putText(img,"{} contours of length {:.2f}".format(len(contours), total_perimeter), (10, 170),
+                            font, 
+                            fontScale,
+                            fontColor,
+                            thickness,
+                            lineType)
+
+                cv2.drawContours(img, contours, -1, (0,255,0), 3)
+
+                if total_perimeter > DRAWN_LENGTH:
+                    if not bDrawn: 
+                        bDrawn = True
+                        startTime = time.time()
+                else: 
+                    bDrawn = False
+
+                if time.time() - startTime > ERASED_TIMEOUT and bDrawn:
+                    robotState = DRAW
                     bStarted = False
                     startTime = time.time()
 
-                    # erase the image while drawing
-                    cv2.rectangle(img, (0,0), (int(capWidth), int(capHeight)), (255, 255, 255), cv2.FILLED)
-                    
+                # if time.time() - startTime > ASSESS_INTERVAL and total_perimeter > DRAWN_LENGTH:
+                #     # robotState = PERSON
+                #     # lookForward()
+                #     robotState = DRAW
+                #     bStarted = False
+                #     startTime = time.time()
 
-            elif robotBehavior == FACE:
+                    # erase the image while drawing
+                    # cv2.rectangle(img, (0,0), (int(capWidth), int(capHeight)), (255, 255, 255), cv2.FILLED)
+
+            elif robotState == PERSON:
     
                 # Convert to grayscale
                 gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -429,32 +737,30 @@ while True:
                         # better motion
                         ret = arm.set_position_aa(axis_angle_pose=[0, 0, 0, 0, dTilt, dPan], speed=500, relative=True, wait=False)
                         tLastUpdated = time.time()
-
                     
-                    # CHECK IF WE ARE CLOSE
-                    if maxSize > 400:
-                        # keep track that we are seeing a close face
-                        if not bCloseFace:
-                            bCloseFace = True
-                            timeSeenClose = time.time()
+                    # # CHECK IF WE ARE CLOSE
+                    # if maxSize > 400:
+                    #     # keep track that we are seeing a close face
+                    #     if not bCloseFace:
+                    #         bCloseFace = True
+                    #         timeSeenClose = time.time()
 
-                        # if time.time() - timeSeenClose > timeLookClose:
-                        #     # switch to look at ASSESS
-                        #     robotBehavior = ASSESS
-                        #     bStarted = False
-                        #     bCloseFace = False
+                    #     # if time.time() - timeSeenClose > timeLookClose:
+                    #     #     # switch to look at ASSESS
+                    #     #     robotState = ASSESS
+                    #     #     bStarted = False
+                    #     #     bCloseFace = False
 
                     timeLastSeen = time.time()
-                    tLastUpdate = time.time()
 
-                    if time.time() - startTime > FACE_INTERVAL:
+                    if time.time() - startTime > ENGAGEMENT_TIME:
                         # switch to look at ASSESS
-                        robotBehavior = ASSESS
+                        robotState = ASSESS_DRAWN
                         bStarted = False
                         bCloseFace = False        
                     
                 else:
-
+                    # no adequate faces
                     timeElapsed = time.time() - timeLastSeen
 
                     cv2.putText(img, "{:.2f}".format(timeElapsed), (10, 170), 
@@ -488,21 +794,22 @@ while True:
                             tLastUpdated = time.time()
 
                     # if time.time() - timeSeenClose > timeLookClose:
-                    if time.time() - timeSeenClose > 10.0:
+                    if time.time() - timeSeenClose > FACE_TIMEOUT:
                         # switch to look at ASSESS
-                        robotBehavior = ASSESS
+                        robotState = PERSON
                         bStarted = False
                         bCloseFace = False
 
-        cv2.putText(img,"state: {} time: {:.2f}(s)".format(robotBehavior, time.time() - startTime), (10, 70), 
+        cv2.putText(img,"state: {} time: {:.2f}(s)".format(robotState, time.time() - startTime), (10, 70), 
             font, 
             fontScale,
             fontColor,
             thickness,
             lineType)
 
-        # Display video
-        cv2.imshow('img', img)
+        if img is not None:
+            # Display video
+            cv2.imshow('img', img)
 
     # Stop if escape key is pressed
     k = cv2.waitKey(30) & 0xff
@@ -523,18 +830,3 @@ if hasattr(arm, 'release_count_changed_callback'):
 arm.release_error_warn_changed_callback(state_changed_callback)
 arm.release_state_changed_callback(state_changed_callback)
 arm.release_connect_changed_callback(error_warn_change_callback)
-
-
-## LEFTOVERS
-
-# ISEA
-# params = {'speed': 800, 'acc': 2000, 'angle_speed': 75, 'angle_acc': 1000, 'events': {}, 'variables': variables, 'callback_in_thread': True, 'quit': False} # ISEA
-# params = {'speed': 500, 'acc': 2000, 'angle_speed': 1000, 'angle_acc': 5000, 'events': {}, 'variables': variables, 'callback_in_thread': True, 'quit': False}
-# params = {'speed': 100, 'acc': 2000, 'angle_speed': 20, 'angle_acc': 500, 'events': {}, 'variables': variables, 'callback_in_thread': True, 'quit': False}
-
-# frontAngle = [0.1, -34.9, -0.1, 1.6, 0, -63.5, 0.1]
-# frontAngle = [0.2, 4.7, -0.2, 39.1, 0, -60.0]
-# downAngle = [0.4, 5.6, -1.0, 110.1, 2.3, 101.6, -0.1]
-# downPos = [467.8, 0.1, 589.1, -179.9, -1.5, 0]
-# downAngle = [-0.2, -0.4, 0, 92.7, 1.1, 81.1 -0.2]
-# downAngle = [0, 1.8, 0, 100, 0.1, 96.7, 0]

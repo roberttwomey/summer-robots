@@ -357,6 +357,7 @@ while True:
             # arm.set_position(*topleftup, speed=params['speed'], wait=True)
 
             # repeat drawing a number of times
+            bFirst = True
 
             for path in new_paths:
 
@@ -369,7 +370,11 @@ while True:
                 print("path started: {}".format(start_point))
                 # arm.set_position(*start_point, speed=params['speed'], wait=True)
                 # arm.set_position(*start_point, speed=drawSpeed, mvacc=drawAccel, wait=False, radius=drawRadius)
-                arm.set_position(*start_point, speed=drawSpeed, mvacc=drawAccel, wait=False)
+
+                if bFirst: 
+                    arm.set_position(*start_point, speed=liftSpeed, mvacc=drawAccel, wait=False)
+                else:
+                    arm.set_position(*start_point, speed=drawSpeed, mvacc=drawAccel, wait=False)
 
                 for point in path:
                     # position = calcArmPos(H, point)
