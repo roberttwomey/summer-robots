@@ -24,12 +24,13 @@ drawAccel = 500
 #dwellTime = 0.0 #0.1 default
 
 files = [
-    "../data/frame00572.json",
-    "../data/frame00640.json",
-    "../data/frame01463.json",
-    "../data/GAN_sample02.json",
-    "../data/sample01.json",
-    "../data/frame00237.json"
+    "data/frame00237.json",
+    "data/frame00572.json",
+    "data/frame01463.json",
+    "data/frame02520.json",
+    "data/frame02901.json",
+    "data/GAN_sample02.json",
+    "data/sample01.json"
     ]
 
 debug = False
@@ -256,8 +257,7 @@ def renderAsImage(paths, filename, outwidth, outheight):
     cv2.imwrite(filename, img)
 
 
-
-# ==== Initialize Robot Arm ====
+# ==== Initilize Robot Arm ====
 
 arm = XArmAPI('192.168.4.15')
 arm.connect()
@@ -331,9 +331,8 @@ while True:
         pngfile = infile.split(".json")[0]+"_paths.png"
         renderAsImage(paths, pngfile, 1024, 1024)
 
-
-        if bTest:
-            exit()
+        # if bTest:
+        #     exit()
 
         new_paths = []
 
@@ -371,10 +370,7 @@ while True:
                 # arm.set_position(*start_point, speed=params['speed'], wait=True)
                 # arm.set_position(*start_point, speed=drawSpeed, mvacc=drawAccel, wait=False, radius=drawRadius)
 
-                if bFirst: 
-                    arm.set_position(*start_point, speed=liftSpeed, mvacc=drawAccel, wait=False)
-                else:
-                    arm.set_position(*start_point, speed=drawSpeed, mvacc=drawAccel, wait=False)
+                arm.set_position(*start_point, speed=drawSpeed, mvacc=drawAccel, wait=False)
 
                 for point in path:
                     # position = calcArmPos(H, point)

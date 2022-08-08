@@ -1,7 +1,10 @@
 #!/usr/local/bin/python3
 
-# Simple text programs for python control of xARM
-# reference for https://github.com/xArm-Developer/xArm-Python-SDK
+# Draw a file with xarm: 
+#   python draw_file_json.py ../GAN_sample01.json
+#
+# or render to png (set bTest = True)
+
 
 from xarm.wrapper import XArmAPI
 import time
@@ -10,7 +13,7 @@ import cv2
 import simplejson
 import numpy as np
 
-bTest = False
+bTest = True
 simulate = False
 
 liftHeight = 10.0#15.0
@@ -261,7 +264,7 @@ if len(sys.argv) > 1:
 else: 
     infile = "../data/sample01.json"
 
-unsorted_paths = readJSON(infile, 908, 600)#681)
+unsorted_paths = readJSON(infile, 908, 681)
 paths = sortPaths(unsorted_paths)
 
 pngfile = infile.split(".json")[0]+"_paths.png"
