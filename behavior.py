@@ -20,7 +20,7 @@ import numpy as np
 CAMERA_NUM = 2
 
 FACE = 0
-PAPER = 1
+ASSESS = 1
 DRAW = 2
 REST = 3
 
@@ -31,12 +31,16 @@ REST = 3
 # 4 - rest
 
 FACE_INTERVAL = 5.0
-REST_INTERVAL = 10.0
+REST_INTERVAL = 1.0
+ASSESS_INTERVAL = 20.0
+
 timeLookClose = 1.5
 
 # joint angle descriptions of front look and down look
 frontAngle = [0, 2.5, 0, 37.3, 0, -57.3, 0]
-downAngle = [0.8, -0.9, 0.8, 78.8, 0.1, 78.3, 1.5]
+
+# downAngle = [0.8, -0.9, 0.8, 78.8, 0.1, 78.3, 1.5]
+downAngle = [0.8, -1, 0.8, 77.3, 0.1, 76.9, 1.5] # closer
 downPos = [467.8, 7, 569.1, -179.9, -1.5, 0]
 
 variables = {}
@@ -57,7 +61,6 @@ robotZ = 400.0
 bStarted = False
 startTime = 0
 timeLastSeen = 0
-timeLookPaper = 5.0
 bCloseFace = False
 timeSeenClose = 0
 bMadeDrawing = False
@@ -176,7 +179,7 @@ if not params['quit']:
 
 # ==== Drawing Helpers and Parameters ====
 
-# define key positions and mapping to rectangle on paper
+# define key positions and mapping to rectangle on ASSESS
 rest = [250, 0, 120, 180, 0, 0]
 
 zheight = 112.1
@@ -202,7 +205,6 @@ penpathImage = np.zeros((outheight, outwidth, 3), np.uint8)
 cv2.rectangle(penpathImage, (0,0), (outheight, outwidth), WHITE, cv2.FILLED)
 linewidth = 3
 
-
 # Geometry Transformation and Helpers
 
 def calcTransformed(matrix, p):
@@ -225,16 +227,15 @@ points2=np.array([topleft[:2], botleft[:2], botright[:2], topright[:2]])
 H, status = cv2.findHomography(points1, points2)
 # print(H, status)
 
-# ==== Setup OpenCV / Vision ====
 
-# To capture video from webcam. 
+# ==== OpenCV / Vision ====
+
+# To capture video from webcam
 cap = cv2.VideoCapture(CAMERA_NUM) # choose the proper camera number
-# cap = cv2.VideoCapture(1) # facetime camera
-# To use a video file as input 
-# cap = cv2.VideoCapture('filename.mp4')
 
 capWidth = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
 capHeight = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
+print(capWidth, capHeight)
 
 # Load the cascade
 face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
@@ -250,13 +251,28 @@ lineType               = 2
 tiltAng = 0
 panAng = 5
 
+# OpenCV helpers
+def auto_canny(image, sigma=0.33):
+    # compute the median of the single channel pixel intensities
+    # from here http://www.pyimagesearch.com/2015/04/06/zero-parameter-automatic-canny-edge-detection-with-python-and-opencv/
+
+    v = np.median(image)
+ 
+    # apply automatic Canny edge detection using the computed median
+    lower = int(max(0, (1.0 - sigma) * v))
+    upper = int(min(255, (1.0 + sigma) * v))
+    edge = cv2.Canny(image, lower, upper)
+ 
+    # return the edge image
+    return edge
+
 while True:
 
     if robotBehavior == DRAW: 
         # drawing is a blocking behavior
 
-        # cv2.rectangle(penpathImage, (0,0), (outheight, outwidth), WHITE, cv2.FILLED)
-        # cv2.imshow('img', penpathImage)
+        cv2.rectangle(penpathImage, (0,0), (outheight, outwidth), (255, 255, 255), cv2.FILLED)
+        cv2.imshow('img', penpathImage)
 
         # cv2.putText(penpathImage,"DRAWING", (10, 210), 
         #     font, 
@@ -282,7 +298,6 @@ while True:
         # robotBehavior = FACE
 
         # go to rest pos and wait
-
         bStarted = False
         robotBehavior = REST
         startTime = time.time()
@@ -295,6 +310,7 @@ while True:
             robotBehavior = FACE
             bStarted = False
             timeLastSeen = time.time()
+            startTime = time.time()
     else:
         
         # Read the frame
@@ -302,7 +318,7 @@ while True:
     
         if img is not None:
             
-            if robotBehavior == PAPER:
+            if robotBehavior == ASSESS:
                 
                 # look down
                 if not bStarted:
@@ -311,23 +327,48 @@ while True:
                     lookDown()
                     bStarted = True
 
-                # flip image if we are looking at the paper
+                # flip image if we are looking at the ASSESS
                 img = cv2.flip(img, -1)
 
-                cv2.rectangle(img, (160, 0), (1760, 1080), (255, 255, 0), 10)
+                # detect contours
+                imgray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+                blurred = cv2.blur(imgray, (3,3))
+                edged = auto_canny(blurred, 0.3)
+                # ret, thresh = cv2.threshold(imgray, 156, 255, 0)
+                ret, thresh = cv2.threshold(edged, 64, 255, 0)
+                contours, hierarchy = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+                
+                # find total perimeter
 
-                # look for changes on paper
-                # decide when it is empty again
-                # DECIDE IF IT IS EMPTY THEN: 
-                # - Y add a drawing
-                # - N engage the viewer
+                total = 0
+                for cntr in contours:
+                    area = cv2.contourArea(cntr)
+                    perimeter = cv2.arcLength(cntr, True)
+                    total+=perimeter
 
-                if time.time() - startTime > timeLookPaper:
+                # subtract background
+                # print(len(contours))
+                cv2.putText(img,"{} contours of length {:.2f}".format(len(contours), total), (10, 170),
+                            font, 
+                            fontScale,
+                            fontColor,
+                            thickness,
+                            lineType)
+
+                # cv2.drawContours(img, simple_contours, -1, (0,255,0), 3)
+                cv2.drawContours(img, contours, -1, (0,255,0), 3)
+
+                # if (time.time() - startTime > timeLookASSESS) and (len(contours) < 10):
+                if time.time() - startTime > ASSESS_INTERVAL and total < 1000:
                     # robotBehavior = FACE
                     # lookForward()
                     robotBehavior = DRAW
                     bStarted = False
                     startTime = time.time()
+
+                    # erase the image while drawing
+                    cv2.rectangle(img, (0,0), (int(capWidth), int(capHeight)), (255, 255, 255), cv2.FILLED)
+                    
 
             elif robotBehavior == FACE:
     
@@ -398,27 +439,24 @@ while True:
                             timeSeenClose = time.time()
 
                         # if time.time() - timeSeenClose > timeLookClose:
-                        #     # switch to look at paper
-                        #     robotBehavior = PAPER
+                        #     # switch to look at ASSESS
+                        #     robotBehavior = ASSESS
                         #     bStarted = False
                         #     bCloseFace = False
 
-                    # DOESN'T WORK
-                    # dollyX = offsetX
-                    # dollyZ = offsetY
-                    # ret = arm.set_position_aa(axis_angle_pose=[dollyX, 0, dollyZ, 0, dTilt, dPan], speed=700, relative=True, wait=False, radius=1.0)
-
-                    # arm.set_tool_position(pitch=dTilt, wait=False)
-                    # move j1
-                    # code = arm.set_servo_angle(servo_id=1, angle=dPan, relative=True, is_radian=False, wait=True)
-                    # print(code)
-
                     timeLastSeen = time.time()
                     tLastUpdate = time.time()
+
+                    if time.time() - startTime > FACE_INTERVAL:
+                        # switch to look at ASSESS
+                        robotBehavior = ASSESS
+                        bStarted = False
+                        bCloseFace = False        
                     
                 else:
 
                     timeElapsed = time.time() - timeLastSeen
+
                     cv2.putText(img, "{:.2f}".format(timeElapsed), (10, 170), 
                         font, 
                         fontScale,
@@ -428,6 +466,8 @@ while True:
 
                     if timeElapsed > 1.0 and timeElapsed < 5.0:
                         
+                        # relax back
+
                         # print("relaxing to front")
                         cv2.putText(img,"RELAXING", (10, 210), 
                             font, 
@@ -447,49 +487,19 @@ while True:
 
                             tLastUpdated = time.time()
 
-
-                    if time.time() - timeSeenClose > timeLookClose:
-                        # switch to look at paper
-                        robotBehavior = PAPER
+                    # if time.time() - timeSeenClose > timeLookClose:
+                    if time.time() - timeSeenClose > 10.0:
+                        # switch to look at ASSESS
+                        robotBehavior = ASSESS
                         bStarted = False
                         bCloseFace = False
 
-
-                    # elif timeElapsed >= 5.0:
-                    #     # switch to draw
-                    #     lookForward()
-                    #     robotBehavior = DRAW
-                    #     bStarted = False
-                        
-
-                    # if bStarted: 
-                    #     bStarted = False
-                    #     timeLastSeen = time.time()
-
-                    # if not bStarted and time.time()-timeLastSeen > 3.0:
-                    #     # lost face, reset timer
-                    #     startTime = time.time()
-
-                    #     # move back to center
-                    #     # lookForward()
-
-                    #     # relax to front position
-                    #     currAngle = arm.angles
-                    #     weight=0.05
-                    #     destAngle = [(1.0-weight)*currAngle[i]+weight*frontAngle[i] for i in range(len(frontAngle))]
-                    #     arm.set_servo_angle(angle=destAngle, speed=params['angle_speed'], mvacc=params['angle_acc'], wait=False, radius=-1.0)            
-
-                # if time.time() - startTime > timeLookFace: 
-                #     robotBehavior = PAPER
-                #     bStarted = False
-
-        cv2.putText(img,"state: {} time: {:.2f}".format(robotBehavior, time.time() - startTime), (10, 70), 
+        cv2.putText(img,"state: {} time: {:.2f}(s)".format(robotBehavior, time.time() - startTime), (10, 70), 
             font, 
             fontScale,
             fontColor,
             thickness,
             lineType)
-
 
         # Display video
         cv2.imshow('img', img)
