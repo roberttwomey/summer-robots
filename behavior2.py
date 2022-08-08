@@ -29,7 +29,7 @@ REST = 2
 ASSESS_ERASED=3
 ASSESS_DRAWN=4
 
-robotState = PERSON
+robotState = ASSESS_DRAWN #PERSON
 
 # order of operations
 # 1 - scan for faces
@@ -43,7 +43,7 @@ REST_TIMEOUT = 20.0 # how long do we rest when we are done drawing
 ERASED_TIMEOUT = 5.0 # how soon do we start over when everything is erased
 DRAWN_TIMEOUT = 15.0 # how long does the human have to draw
 
-DRAWN_LENGTH = 10000.0 # perimeter at least 10kpx long to be adequate human drawing
+DRAWN_LENGTH = 6000.0 # perimeter at least 10kpx long to be adequate human drawing
 ERASED_LENGTH = 1000.0 # perimeter for when it is erased
 
 
@@ -499,6 +499,10 @@ def detectContours(img):
     return contours, total
 
 
+bStarted = False
+bStored = False
+bStorePerimeter = False
+
 # ==== MAIN LOOP OF PROGRAM ====
 
 while True:
@@ -637,12 +641,13 @@ while True:
                 if not bStarted:
                     # lookForward()
                     lookDown()
+                    startTime = time.time()
                     bStarted = True
+                    bStored = False
                     bStorePerimeter = True
                     print("==== ASSESS_DRAWN ====")
-                    bDrawn = False
 
-                # flip image if we are looking at the paper
+                # flip image since we are looking at the paper
                 img = cv2.flip(img, -1)
 
                 contours, total_perimeter = detectContours(img)
@@ -656,19 +661,24 @@ while True:
 
                 cv2.drawContours(img, contours, -1, (0,255,0), 3)
 
-                if bStorePerimeter:
+                if bStorePerimeter and time.time() - startTime > 3.0:
                     starting_perimeter = total_perimeter
+                    print("starting perimeter ", starting_perimeter)
                     bStorePerimeter = False
-
-                if total_perimeter > starting_perimeter + DRAWN_LENGTH:
-                    if not bDrawn: 
-                        bDrawn = True
-                        startTime = time.time()
-                else: 
+                    bStored = True
                     bDrawn = False
 
-                if time.time() - startTime > ERASED_TIMEOUT and bDrawn:
-                    robotState = ASSESS_ERASED
+
+                if bStored:
+                    if total_perimeter > (starting_perimeter+DRAWN_LENGTH):
+                        if not bDrawn: 
+                            bDrawn = True
+                            startTime = time.time()
+                            print("added enough ", total_perimeter, starting_perimeter+DRAWN_LENGTH)
+                        
+
+                if time.time() - startTime > ERASED_TIMEOUT and bDrawn and bStored:
+                    robotState = REST
                     bStarted = False
                     startTime = time.time()
 
