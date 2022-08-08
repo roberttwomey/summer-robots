@@ -241,12 +241,13 @@ H, status = cv2.findHomography(points1, points2)
 # ==== Drawing File Loading
 
 files = [
-    "../data/frame00572.json",
-    "../data/frame00640.json",
-    "../data/frame01463.json",
-    "../data/GAN_sample02.json",
-    "../data/sample01.json",
-    "../data/frame00237.json"
+    "data/frame00237.json",
+    "data/frame00572.json",
+    "data/frame01463.json",
+    "data/frame02520.json",
+    "data/frame02901.json",
+    "data/GAN_sample02.json",
+    "data/sample01.json"
     ]
 
 # polygon loading / sorting
@@ -700,7 +701,7 @@ while True:
                 if (facecount > 0) and (maxSize > closeSizeCutoff):
 
                     if not bStarted:
-                        print("==== PERSON DETECTED ====")
+                        print(" person detected ")
                         startTime = time.time()
                         bStarted = True
 
@@ -788,6 +789,7 @@ while True:
                         robotState = PERSON
                         bStarted = False
                         bCloseFace = False
+                        print("==== PEOPLE ====")
 
         cv2.putText(img,"state: {} time: {:.2f}(s)".format(robotState, time.time() - startTime), (10, 70), 
             font, 
