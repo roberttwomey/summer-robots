@@ -19,7 +19,9 @@ import simplejson
 
 
 # ==== STATES ====
-CAMERA_NUM = 2
+CAMERA_NUM = 2 # laptop
+# CAMERA_NUM = 0 # mac mini
+
 
 PERSON = 0
 DRAW = 1
@@ -27,7 +29,7 @@ REST = 2
 ASSESS_ERASED=3
 ASSESS_DRAWN=4
 
-robotState = ASSESS_ERASED
+robotState = PERSON
 
 # order of operations
 # 1 - scan for faces
@@ -565,7 +567,7 @@ while True:
 
         # # go to rest pos and wait
         bStarted = False
-        robotState = REST
+        robotState = ASSESS_DRAWN
         
         # admire your handiwork and wait for someone to erase it
         # bStarted = False
@@ -622,16 +624,10 @@ while True:
                     bErased = False
 
                 if time.time() - startTime > ERASED_TIMEOUT and bErased:
-                    # robotState = PERSON
-                    # lookForward()
-                    # bStarted = False
-
-                    # to oscillate between DRAW and ERASE to prompt machine to DRAW
-                    robotState = DRAW
+                    robotState = PERSON
+                    lookForward()
                     bStarted = False
 
-                    # erase the image while drawing
-                    # cv2.rectangle(img, (0,0), (int(capWidth), int(capHeight)), (255, 255, 255), cv2.FILLED)
                     
             elif robotState == ASSESS_DRAWN:
                 
@@ -640,6 +636,7 @@ while True:
                     # lookForward()
                     lookDown()
                     bStarted = True
+                    bStorePerimeter = True
                     print("==== ASSESS_DRAWN ====")
                     bDrawn = False
 
@@ -657,7 +654,11 @@ while True:
 
                 cv2.drawContours(img, contours, -1, (0,255,0), 3)
 
-                if total_perimeter > DRAWN_LENGTH:
+                if bStorePerimeter:
+                    starting_perimeter = total_perimeter
+                    bStorePerimeter = False
+
+                if total_perimeter > starting_perimeter + DRAWN_LENGTH:
                     if not bDrawn: 
                         bDrawn = True
                         startTime = time.time()
@@ -665,7 +666,7 @@ while True:
                     bDrawn = False
 
                 if time.time() - startTime > ERASED_TIMEOUT and bDrawn:
-                    robotState = DRAW
+                    robotState = ASSESS_ERASED
                     bStarted = False
                     startTime = time.time()
 
@@ -731,24 +732,13 @@ while True:
                         ret = arm.set_position_aa(axis_angle_pose=[0, 0, 0, 0, dTilt, dPan], speed=500, relative=True, wait=False)
                         tLastUpdated = time.time()
                     
-                    # # CHECK IF WE ARE CLOSE
-                    # if maxSize > 400:
-                    #     # keep track that we are seeing a close face
-                    #     if not bCloseFace:
-                    #         bCloseFace = True
-                    #         timeSeenClose = time.time()
-
-                    #     # if time.time() - timeSeenClose > timeLookClose:
-                    #     #     # switch to look at ASSESS
-                    #     #     robotState = ASSESS
-                    #     #     bStarted = False
-                    #     #     bCloseFace = False
 
                     timeLastSeen = time.time()
 
                     if time.time() - startTime > ENGAGEMENT_TIME:
-                        # switch to look at ASSESS
-                        robotState = ASSESS_DRAWN
+                        # switch to look at DRAW
+                        robotState = DRAW
+                        lookForward()
                         bStarted = False
                         bCloseFace = False        
                     
@@ -788,11 +778,11 @@ while True:
 
                     # if time.time() - timeSeenClose > timeLookClose:
                     if time.time() - timeSeenClose > FACE_TIMEOUT:
-                        # switch to look at ASSESS
-                        robotState = PERSON
-                        bStarted = False
-                        bCloseFace = False
-                        print("==== PEOPLE ====")
+                        if bStarted:
+                            # switch to look at ASSESS
+                            bStarted = False
+                            bCloseFace = False
+                            print("==== PEOPLE ====")
 
         cv2.putText(img,"state: {} time: {:.2f}(s)".format(robotState, time.time() - startTime), (10, 70), 
             font, 
