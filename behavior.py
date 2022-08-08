@@ -24,11 +24,9 @@ CAMERA_NUM = 2
 PERSON = 0
 DRAW = 1
 REST = 2
-# ASSESS = 1
 ASSESS_ERASED=3
 ASSESS_DRAWN=4
 
-# robotState = PERSON
 robotState = ASSESS_ERASED
 
 # order of operations
@@ -38,15 +36,14 @@ robotState = ASSESS_ERASED
 # 4 - rest
 
 FACE_TIMEOUT = 10.0 # how long does a person have to disappear for the system to reset
-ENGAGEMENT_TIME = 5.0 # how long does a person have to be seen by the robot for the cycle to start
+ENGAGEMENT_TIME = 10.0 # how long does a person have to be seen by the robot for the cycle to start
 REST_TIMEOUT = 20.0 # how long do we rest when we are done drawing
-ERASED_TIMEOUT = 10.0 # how soon do we start over when everything is erased
+ERASED_TIMEOUT = 5.0 # how soon do we start over when everything is erased
 DRAWN_TIMEOUT = 15.0 # how long does the human have to draw
 
 DRAWN_LENGTH = 10000.0 # perimeter at least 10kpx long to be adequate human drawing
 ERASED_LENGTH = 1000.0 # perimeter for when it is erased
 
-timeLookClose = 1.5
 
 # joint angle descriptions of front look and down look
 frontAngle = [0, 2.5, 0, 37.3, 0, -57.3, 0]
@@ -80,7 +77,7 @@ bMadeDrawing = False
 drawSpeed = 50
 drawRadius = 0.0
 drawAccel = 500
-rapidSpeed = 500
+rapidSpeed = 600#500
 rapidAccel = 1000
 
 
@@ -518,7 +515,7 @@ while True:
 
         infile = random.choice(files)
 
-        print(f"======== READING FILE #{infile} ========")
+        print(f"======== DRAWING FILE {infile} ========")
 
         unsorted_paths = readJSON(infile, 908, 600)#681)
         paths = sortPaths(unsorted_paths)
@@ -558,7 +555,7 @@ while True:
             print("path ended, sent {} points".format(len(path)))#: {}".format(end_point))
             sys.stdout.flush()
 
-        lookForward()
+        # lookForward()
         # robotState = PERSON
 
         # # go to rest pos and wait
@@ -578,7 +575,7 @@ while True:
 
         if time.time() - startTime > REST_TIMEOUT:
             lookForward()
-            robotState = PERSON
+            robotState = ASSESS_ERASED
             bStarted = False
             timeLastSeen = time.time()
             startTime = time.time()
@@ -668,15 +665,6 @@ while True:
                     bStarted = False
                     startTime = time.time()
 
-                # if time.time() - startTime > ASSESS_INTERVAL and total_perimeter > DRAWN_LENGTH:
-                #     # robotState = PERSON
-                #     # lookForward()
-                #     robotState = DRAW
-                #     bStarted = False
-                #     startTime = time.time()
-
-                    # erase the image while drawing
-                    # cv2.rectangle(img, (0,0), (int(capWidth), int(capHeight)), (255, 255, 255), cv2.FILLED)
 
             elif robotState == PERSON:
     
@@ -712,6 +700,7 @@ while True:
                 if (facecount > 0) and (maxSize > closeSizeCutoff):
 
                     if not bStarted:
+                        print("==== PERSON DETECTED ====")
                         startTime = time.time()
                         bStarted = True
 
