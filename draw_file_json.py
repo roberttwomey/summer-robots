@@ -91,67 +91,70 @@ def readJSON(filename, width=224.0, height=224.0):
                 lastpos = pos
                 bFirstPoint = False
 
-            if np.linalg.norm(pos-lastpos) < minlen:
-                continue
-            else: 
-                lastpos = pos
-                thispath.append((x, y))
+            # if np.linalg.norm(pos-lastpos) < minlen:
+            #     continue
+            # else: 
+            lastpos = pos
+            thispath.append((x, y))
+
             # thispath.append((x, y))
             count+=1
         
-        if(len(thispath) > 5):
-            paths_out.append(thispath)
+        # if(len(thispath) > 5):
+        paths_out.append(thispath)
     
     print("parsed {} paths with {} points in json file {}".format(len(pydata), count, filename))
     return paths_out
 
-def readGeoJSON(filename):
-    with open (filename, "r") as myfile:
-        data = myfile.read()
+# ---- NOT USED -----
 
-    pydata = simplejson.loads(data)
+# def readGeoJSON(filename):
+#     with open (filename, "r") as myfile:
+#         data = myfile.read()
 
-    polys = [] 
-    minlen = 0.01
-    # maxlen = 0.25
-    bFirstPoint = True
+#     pydata = simplejson.loads(data)
 
-    for feat in pydata['features']:
+#     polys = [] 
+#     minlen = 0.01
+#     # maxlen = 0.25
+#     bFirstPoint = True
 
-        coords = feat['geometry']['coordinates']
-        # print(len(coords))
-        pcount = 0
-        for path in coords:
-            # print("{}: {} of {}".format(len(path), pcount, len(coords)))
-            this_path = []
-            count = 0
-            pcount+=1
-            for point in path:
+#     for feat in pydata['features']:
+
+#         coords = feat['geometry']['coordinates']
+#         # print(len(coords))
+#         pcount = 0
+#         for path in coords:
+#             # print("{}: {} of {}".format(len(path), pcount, len(coords)))
+#             this_path = []
+#             count = 0
+#             pcount+=1
+#             for point in path:
                 
-                x = point[0]/680.0
-                y = 0.875-(point[1]/512.0*0.752)
+#                 x = point[0]/680.0
+#                 y = 0.875-(point[1]/512.0*0.752)
 
-                pos = np.array([x, y])
+#                 pos = np.array([x, y])
 
-                if bFirstPoint:
-                    lastpos = list(pos)
-                    bFirstPoint = False
-                    this_path.append((x, y))
-                    count+=1
-                else:
-                    dist = np.linalg.norm(pos-lastpos)
+#                 if bFirstPoint:
+#                     lastpos = list(pos)
+#                     bFirstPoint = False
+#                     this_path.append((x, y))
+#                     count+=1
+#                 else:
+#                     dist = np.linalg.norm(pos-lastpos)
 
-                    if dist < minlen:
-                        continue
-                    else: 
-                        lastpos = list(pos)
-                        this_path.append((x, y))
-                        count+=1
+#                     if dist < minlen:
+#                         continue
+#                     else: 
+#                         lastpos = list(pos)
+#                         this_path.append((x, y))
+#                         count+=1
 
-            if count > 2:
-                polys.append(this_path)
+#             if count > 2:
+#                 polys.append(this_path)
 
-    return polys
+#     return polys
 
 
 def sortPaths(paths, longest=False):

@@ -15,7 +15,7 @@ arm.set_pause_time(0.2)
 time.sleep(3)
 
 
-pauseBetween = False
+pauseBetween = True
 simulate = False
 
 arm.set_simulation_robot(on_off=simulate)
