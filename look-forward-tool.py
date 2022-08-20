@@ -109,10 +109,10 @@ if not params['quit']:
 
 
 # look forward but retracted
-code = arm.set_servo_angle(angle=frontBackAngle, peed=params['angle_speed'], mvacc=params['angle_acc'], wait=True, radius=-1.0)
+# code = arm.set_servo_angle(angle=frontBackAngle, peed=params['angle_speed'], mvacc=params['angle_acc'], wait=True, radius=-1.0)
 
 # look down
-code = arm.set_servo_angle(angle=[0.0, 0, 0.0, 0.0, 0.0, 0.0, 0.0], speed=params['angle_speed'], mvacc=params['angle_acc'], wait=True, radius=-1.0)
+# code = arm.set_servo_angle(angle=[0.0, 0, 0.0, 0.0, 0.0, 0.0, 0.0], speed=params['angle_speed'], mvacc=params['angle_acc'], wait=True, radius=-1.0)
 
 
 # relative moves

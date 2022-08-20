@@ -52,7 +52,7 @@ print("Depth Scale is: " , depth_scale)
 
 # We will be removing the background of objects more than
 #  clipping_distance_in_meters meters away
-clipping_distance_in_meters = 1 #1 meter
+clipping_distance_in_meters = 0.41 #1 #1 meter
 clipping_distance = clipping_distance_in_meters / depth_scale
 
 # Create an align object
