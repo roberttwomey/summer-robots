@@ -34,8 +34,9 @@ DRAW = 2
 frontAngle = [0, 2.5, 0, 37.3, 0, -57.3, 0]
 downAngle = [0, 1.8, 0, 100, 0.1, 96.7, 0] # v2
 
-closeSizeCutoff = 100.0
-rejectSize = 300.0
+closeSizeCutoff = 100
+rejectSize = 300
+timeToRelax = 2.0
 
 showDebug = True
 
@@ -236,7 +237,7 @@ while True:
         # Convert to grayscale
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         # Detect the faces
-        faces = face_cascade.detectMultiScale(gray, 1.1, 4, minSize=(150,150), maxSize=(600, 600))
+        faces = face_cascade.detectMultiScale(gray, 1.1, 4, minSize=(closeSizeCutoff, closeSizeCutoff), maxSize=(rejectSize, rejectSize))
         # Draw the rectangle around each face
         
         facecount = 0
@@ -269,7 +270,7 @@ while True:
             offsetX = (0.5*capWidth-(x+w*0.5))/capWidth
             offsetY = (0.5*capHeight-(y+h*0.5))/capHeight
             
-            scale = 7.0
+            scale = 4.0
             dTilt = -1.0*scale*offsetY
             dPan = scale*offsetX
             
@@ -311,7 +312,9 @@ while True:
                 thickness,
                 lineType)
 
-            if timeElapsed > 1.0 and timeElapsed < 5.0:
+            #if timeElapsed > 1.0 and timeElapsed < 5.0:
+
+            if timeElapsed > timeToRelax:
                 
                 # print("relaxing to front")
                 cv2.putText(img,"RELAXING", (10, 110), 
